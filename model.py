@@ -1,24 +1,17 @@
 import networkx as nx
-import matplotlib.pyplot as plt
-
-CAPACITY = 3000
+from switch import Switch
+QUEUE_CAPACITY = 10000
+SERVICE_RATE = 3000
 
 G = nx.Graph()
 
-switches = {1: {"service_rate": 10,
-                "capacity": 30,
-                "queue_legth": 15}}
+switches_info = {1: {"service_rate": SERVICE_RATE,
+                "queue_capacity": QUEUE_CAPACITY}
+            }
 
-edges = {(1,2): {"weight": 3}}
+switches = [Switch(**switches_info[i]) for i in switches_info]
 
-G.add_nodes_from([(1, {"capacity": CAPACITY}), (2, {"capacity": CAPACITY}),
-                   (3, {"capacity": CAPACITY})])
+G.add_nodes_from(switches)
 
-G.add_edges_from([(1, 2, {"weight": 3}), (1, 3, {"weight": 3}),
-                   (2, 3, {"weight": 3})])
+print(list(G.nodes))
 
-# print(list(G.nodes))
-# print(list(G.edges))
-
-path = nx.shortest_path(G, source=1, target=3, weight=None, method='dijkstra')
-print(path)
