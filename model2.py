@@ -147,7 +147,7 @@ for flow_name, traffic in flows.items():
 
 average_delay_in_network = sum(delays) / len(delays)
 
-print(f"Average delay = {average_delay_in_network}")
+print(f"Average delay = {round(average_delay_in_network,2)}s")
 
 print("---------------------")
 print("Packet loss for each switch")
