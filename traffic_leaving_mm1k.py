@@ -24,7 +24,14 @@ def traffic_leaving_mm1k(incoming_flows, service_rate, queue_capacity):
     # 2. Obliczenie obciążenia (rho)
     ro = aggregated_traffic / service_rate
 
-    leaving_probability = (1 - ro**queue_capacity) / (1 - ro**(queue_capacity + 1))
+    # Unikanie overflow
+    if ro < 1.0:
+        leaving_probability = (1 - ro**queue_capacity) / (1 - ro**(queue_capacity + 1))
+            
+    else:
+        numerator = (1.0 / ro) - (ro ** -(queue_capacity + 1))
+        denominator = 1.0 - (ro ** -(queue_capacity + 1))
+        leaving_probability = numerator / denominator    
     
     outgoing_flows = {}
     

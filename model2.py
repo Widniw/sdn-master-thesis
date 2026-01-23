@@ -4,18 +4,29 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import copy
 from traffic_leaving_mm1k import traffic_leaving_mm1k
+import random
 
 
-G = json2networkx("topologies/mesh3x3.json")
+G = json2networkx("topologies/mesh5x5.json")
 
 # flows = {("10.0.0.1", "10.0.0.2"): 3,
 #          ("10.0.0.2", "10.0.0.1"): 2}
 
-flows = {("10.0.0.5", "10.0.0.1"): 15,
-         ("10.0.0.2", "10.0.0.1"): 3,
-         ("10.0.0.8", "10.0.0.7"): 6,
-         ("10.0.0.3", "10.0.0.6"): 8,
-         ("10.0.0.7", "10.0.0.8"): 11,}
+# flows = {("10.0.0.5", "10.0.0.1"): 15,
+#          ("10.0.0.2", "10.0.0.1"): 3,
+#          ("10.0.0.8", "10.0.0.7"): 6,
+#          ("10.0.0.3", "10.0.0.6"): 8,
+#          ("10.0.0.7", "10.0.0.8"): 11,}
+
+# Article accurate flows for grid 5x5
+flows = {}
+no_of_flows = 150
+
+for flow in range(no_of_flows):
+    random_hosts = random.sample(range(1, 26), 2)
+    random_traffic_rate = random.randint(10, 300)
+    flows[(f"10.0.0.{random_hosts[0]}",f"10.0.0.{random_hosts[1]}")] = random_traffic_rate
+
 
 for flow_name, traffic in flows.items():
     dijkstra_path = nx.dijkstra_path(G, source = flow_name[0], target = flow_name[1], weight = "weight")
@@ -24,7 +35,7 @@ for flow_name, traffic in flows.items():
         G[u][v]['flows'][flow_name] = traffic
 
 
-for i in range(8):
+for i in range(25):
 
     G_next = copy.deepcopy(G)
 
@@ -83,6 +94,8 @@ for node in G.nodes(data=True):
 ### CALCULATING DELAY AND PACKET LOSS FOR EACH FLOW
 print("------------------------------------------")
 
+delays = []
+
 for flow_name, traffic in flows.items():
     print(f"For flow {flow_name} with traffic volume: {traffic}")
     dijkstra_path = nx.dijkstra_path(G, source = flow_name[0], target = flow_name[1], weight = "weight")
@@ -107,11 +120,34 @@ for flow_name, traffic in flows.items():
         
         ro = total_incoming / service_rate
 
-        exp_delay_at_switch = (ro / (1 - ro)) - ((queue_capacity+1)*ro**(queue_capacity+1)/(1-ro**(queue_capacity+1)))
+        if ro < 1.0:
+            # Wzór standardowy dla rho < 1
+            term1 = ro / (1 - ro)
+            term2 = ((queue_capacity + 1) * (ro ** (queue_capacity + 1))) / (1 - (ro ** (queue_capacity + 1)))
+            L_system = term1 - term2
+                    
+        else: # ro > 1
+            # Wzór przekształcony dla rho > 1 (korzysta z ujemnych potęg, by uniknąć nieskończoności)
+            # Term1: ro / (1 - ro) jest bezpieczne (daje ujemną liczbę)
+            term1 = ro / (1 - ro)
+                    
+            # Term2: Dzielimy licznik i mianownik przez ro^(K+1)
+            # Otrzymujemy: (K+1) / (ro^(-K-1) - 1)
+            term2 = (queue_capacity + 1) / ((ro ** -(queue_capacity + 1)) - 1)
+        
+        L_system = term1 - term2
+
+        exp_delay_at_switch = L_system / total_outgoing
 
         total_delay += exp_delay_at_switch
     
     print(f"{round(total_delay,2) = }s")
+
+    delays.append(total_delay)
+
+average_delay_in_network = sum(delays) / len(delays)
+
+print(f"Average delay = {average_delay_in_network}")
 
 print("---------------------")
 print("Packet loss for each switch")
@@ -131,22 +167,47 @@ for switch, attributes in switches:
     print(f"Packet loss for switch {switch} = {round(packet_loss, 2)}pkt/s")
 
 
+# --- WIZUALIZACJA ---
 
-# pos = nx.kamada_kawai_layout(G)
-# # 4. Draw the Graph
-# plt.figure(figsize=(8, 6))
-# nx.draw(
-#     G,
-#     with_labels=True,
-#     node_size=2000,
-#     node_color="skyblue",
-#     font_size=15,
-#     font_weight="bold",
-#     arrows=True,       # Ensures arrows are drawn
-#     arrowstyle='-|>',  # Fancy arrow style
-#     arrowsize=20,
-#     connectionstyle="arc3,rad=0.1",
-# )
+# 1. Obliczanie szerokości krawędzi na podstawie ruchu
+widths = []
+max_traffic = 0
 
-# plt.title("Basic DiGraph Visualization")
-# plt.show()
+# Iterujemy po krawędziach w takiej samej kolejności, w jakiej nx.draw je rysuje
+for u, v, data in G.edges(data=True):
+    flows_on_edge = data.get('flows', {})
+    traffic_sum = sum(flows_on_edge.values())
+    
+    # Możesz dodać minimalną grubość (np. 1.0), żeby krawędzie z ruchem 0 były widoczne
+    # lub skalować wartości, jeśli ruch jest bardzo duży
+    widths.append(1.0 + traffic_sum * 0.5) 
+    
+    if traffic_sum > max_traffic:
+        max_traffic = traffic_sum
+
+# Opcjonalnie: Normalizacja szerokości, jeśli wartości ruchu są bardzo duże
+widths = [1.0 + (w / max_traffic) * 5.0 for w in widths] if max_traffic > 0 else [1.0] * len(G.edges())
+
+pos = nx.kamada_kawai_layout(G)
+
+plt.figure(figsize=(10, 8))
+
+# Rysowanie grafu z dynamiczną szerokością
+nx.draw(
+    G,
+    pos=pos,
+    with_labels=True,
+    node_size=2000,
+    node_color="skyblue",
+    font_size=10,
+    font_weight="bold",
+    arrows=True,
+    arrowstyle='-|>',
+    arrowsize=20,
+    connectionstyle="arc3,rad=0.1",
+    width=widths,  # <--- TU WSTAWIAMY LISTĘ SZEROKOŚCI
+)
+
+# Dodanie legendy lub tytułu z informacją o skali
+plt.title(f"Wizualizacja obciążenia sieci (Max traffic: {max_traffic:.2f})")
+plt.show()
