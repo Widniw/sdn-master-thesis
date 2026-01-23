@@ -7,25 +7,25 @@ from traffic_leaving_mm1k import traffic_leaving_mm1k
 import random
 
 
-G = json2networkx("topologies/mesh5x5.json")
+G = json2networkx("topologies/mesh3x3_small_queues.json")
 
 # flows = {("10.0.0.1", "10.0.0.2"): 3,
 #          ("10.0.0.2", "10.0.0.1"): 2}
 
-# flows = {("10.0.0.5", "10.0.0.1"): 15,
-#          ("10.0.0.2", "10.0.0.1"): 3,
-#          ("10.0.0.8", "10.0.0.7"): 6,
-#          ("10.0.0.3", "10.0.0.6"): 8,
-#          ("10.0.0.7", "10.0.0.8"): 11,}
+flows = {("10.0.0.5", "10.0.0.1"): 15,
+         ("10.0.0.2", "10.0.0.1"): 3,
+         ("10.0.0.8", "10.0.0.7"): 6,
+         ("10.0.0.3", "10.0.0.6"): 8,
+         ("10.0.0.7", "10.0.0.8"): 11,}
 
 # Article accurate flows for grid 5x5
-flows = {}
-no_of_flows = 150
+# flows = {}
+# no_of_flows = 150
 
-for flow in range(no_of_flows):
-    random_hosts = random.sample(range(1, 26), 2)
-    random_traffic_rate = random.randint(10, 300)
-    flows[(f"10.0.0.{random_hosts[0]}",f"10.0.0.{random_hosts[1]}")] = random_traffic_rate
+# for flow in range(no_of_flows):
+#     random_hosts = random.sample(range(1, 26), 2)
+#     random_traffic_rate = random.randint(10, 300)
+#     flows[(f"10.0.0.{random_hosts[0]}",f"10.0.0.{random_hosts[1]}")] = random_traffic_rate
 
 
 for flow_name, traffic in flows.items():
@@ -180,13 +180,13 @@ for u, v, data in G.edges(data=True):
     
     # Możesz dodać minimalną grubość (np. 1.0), żeby krawędzie z ruchem 0 były widoczne
     # lub skalować wartości, jeśli ruch jest bardzo duży
-    widths.append(1.0 + traffic_sum * 0.5) 
+    widths.append(traffic_sum) 
     
     if traffic_sum > max_traffic:
         max_traffic = traffic_sum
 
 # Opcjonalnie: Normalizacja szerokości, jeśli wartości ruchu są bardzo duże
-widths = [1.0 + (w / max_traffic) * 5.0 for w in widths] if max_traffic > 0 else [1.0] * len(G.edges())
+widths = [1 + (w / max_traffic) * 3 for w in widths]
 
 pos = nx.kamada_kawai_layout(G)
 
