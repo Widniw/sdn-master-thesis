@@ -16,6 +16,15 @@ def json2networkx(json_data):
         G.add_node(node, data = switch_obj)
 
         for neighbor in attributes["neighbors"]:
-            G.add_edge(node, neighbor, weight = 1, flows = [], capacity = 1000)
+            G.add_edge(node, neighbor, weight = 1, flows = {})
+            G.add_edge(neighbor, node, weight = 1, flows = {})
+
+        # Add host x to switch x
+        G.add_node(f"10.0.0.{node}")
+
+        G.add_edge(node, f"10.0.0.{node}", weight = 1, flows = {})
+        G.add_edge(f"10.0.0.{node}", node, weight = 1, flows = {})
+
+
 
     return G
