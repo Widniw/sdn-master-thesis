@@ -8,8 +8,14 @@ from traffic_leaving_mm1k import traffic_leaving_mm1k
 
 G = json2networkx("topologies/mesh3x3.json")
 
-flows = {("10.0.0.1", "10.0.0.2"): 3,
-         ("10.0.0.2", "10.0.0.1"): 2}
+# flows = {("10.0.0.1", "10.0.0.2"): 3,
+#          ("10.0.0.2", "10.0.0.1"): 2}
+
+flows = {("10.0.0.5", "10.0.0.1"): 15,
+         ("10.0.0.2", "10.0.0.1"): 3,
+         ("10.0.0.8", "10.0.0.7"): 6,
+         ("10.0.0.3", "10.0.0.6"): 8,
+         ("10.0.0.7", "10.0.0.8"): 11,}
 
 for flow_name, traffic in flows.items():
     dijkstra_path = nx.dijkstra_path(G, source = flow_name[0], target = flow_name[1], weight = "weight")
@@ -69,12 +75,13 @@ for i in range(8):
 print("G as text:")
 for node in G.nodes(data=True):
     node_id, node_attr = node
-    print(f"Node {node_id}: {node_attr}")
+    print(f"Node {node_id}:")
     for neighbor, edge_attr in G[node_id].items():
         print(f"  -> {neighbor}: {edge_attr}")
 
 
 ### CALCULATING DELAY AND PACKET LOSS FOR EACH FLOW
+print("------------------------------------------")
 
 for flow_name, traffic in flows.items():
     print(f"For flow {flow_name} with traffic volume: {traffic}")
@@ -104,7 +111,7 @@ for flow_name, traffic in flows.items():
 
         total_delay += exp_delay_at_switch
     
-    print(f"{total_delay = }")
+    print(f"{round(total_delay,2) = }s")
 
 print("---------------------")
 print("Packet loss for each switch")
@@ -121,15 +128,8 @@ for switch, attributes in switches:
 
     packet_loss = total_incoming - total_outgoing
 
-    print(f"Packet loss for switch {switch} = {packet_loss}")
+    print(f"Packet loss for switch {switch} = {round(packet_loss, 2)}pkt/s")
 
-
-
-
-
-# TODO: Policzyc dlugosc kolejki, policzyc delay na kazdym switchu i dodac do total,
-# podac go dla flow. Straty pakietow moge dac total_straty, for each switch inc - outgoing
-#Wyprintowac i tyle
 
 
 # pos = nx.kamada_kawai_layout(G)
