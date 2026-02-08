@@ -5,27 +5,28 @@ import networkx as nx
 import copy
 from traffic_leaving_mm1k import traffic_leaving_mm1k
 import random
+import numpy as np
 
 
-G = json2networkx("topologies/mesh3x3_small_queues.json")
+G = json2networkx("topologies/mesh5x5.json")
 
 # flows = {("10.0.0.1", "10.0.0.2"): 3,
 #          ("10.0.0.2", "10.0.0.1"): 2}
 
-flows = {("10.0.0.5", "10.0.0.1"): 15,
-         ("10.0.0.2", "10.0.0.1"): 3,
-         ("10.0.0.8", "10.0.0.7"): 6,
-         ("10.0.0.3", "10.0.0.6"): 8,
-         ("10.0.0.7", "10.0.0.8"): 11,}
+# flows = {("10.0.0.5", "10.0.0.1"): 15,
+#          ("10.0.0.2", "10.0.0.1"): 3,
+#          ("10.0.0.8", "10.0.0.7"): 6,
+#          ("10.0.0.3", "10.0.0.6"): 8,
+#          ("10.0.0.7", "10.0.0.8"): 11,}
 
 # Article accurate flows for grid 5x5
-# flows = {}
-# no_of_flows = 150
+flows = {}
+no_of_flows = 150
 
-# for flow in range(no_of_flows):
-#     random_hosts = random.sample(range(1, 26), 2)
-#     random_traffic_rate = random.randint(10, 300)
-#     flows[(f"10.0.0.{random_hosts[0]}",f"10.0.0.{random_hosts[1]}")] = random_traffic_rate
+for flow in range(no_of_flows):
+    random_hosts = random.sample(range(1, 26), 2)
+    random_traffic_rate = random.randint(10, 300)
+    flows[(f"10.0.0.{random_hosts[0]}",f"10.0.0.{random_hosts[1]}")] = random_traffic_rate
 
 
 for flow_name, traffic in flows.items():
@@ -124,7 +125,6 @@ for flow_name, traffic in flows.items():
             # Wzór standardowy dla rho < 1
             term1 = ro / (1 - ro)
             term2 = ((queue_capacity + 1) * (ro ** (queue_capacity + 1))) / (1 - (ro ** (queue_capacity + 1)))
-            L_system = term1 - term2
                     
         else: # ro > 1
             # Wzór przekształcony dla rho > 1 (korzysta z ujemnych potęg, by uniknąć nieskończoności)
@@ -210,4 +210,50 @@ nx.draw(
 
 # Dodanie legendy lub tytułu z informacją o skali
 plt.title(f"Wizualizacja obciążenia sieci (Max traffic: {max_traffic:.2f})")
+plt.show()
+
+no_of_switches = len(switches)
+
+AVTM_matrix = np.zeros((no_of_switches, no_of_switches))
+
+for switches_src, attributes_src in switches:
+    for switches_dst, attributes_dst in switches:
+        switch_src_index = int(switches_src) - 1
+        switch_dst_index = int(switches_dst) - 1 
+
+        if switches_src == switches_dst:
+            continue
+
+        if G.has_edge(switches_src, switches_dst):
+            
+            edge_data_flows = G[switches_src][switches_dst]['flows']
+
+            sum_of_flows = 0
+
+            for flow, value in edge_data_flows.items():
+                sum_of_flows += value
+            
+            AVTM_matrix[switch_src_index][switch_dst_index] = round(sum_of_flows,2)
+
+plt.figure(figsize=(12, 12))
+
+# We use imshow just to set the limits and aspect ratio, but make it invisible or very light background
+plt.imshow(AVTM_matrix, cmap='Greys', alpha=0.1)
+
+# Loop over data dimensions and create text annotations.
+rows, cols = AVTM_matrix.shape
+for i in range(rows):
+    for j in range(cols):
+        text = plt.text(j, i, str(AVTM_matrix[i, j]),
+                       ha="center", va="center", color="black", fontsize=8)
+
+plt.title('AVTM Matrix')
+# We can keep the ticks to show row/col indices
+# plt.xticks(np.arange(0, 25, 1))
+# plt.yticks(np.arange(0, 25, 1))
+plt.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
+
+# Remove the frame to look more like a raw printed matrix? 
+# Usually figures have frames. I'll keep the frame but make it look clean.
+plt.tight_layout()    
 plt.show()
