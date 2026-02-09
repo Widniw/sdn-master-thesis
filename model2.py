@@ -5,6 +5,7 @@ import networkx as nx
 import copy
 from traffic_leaving_mm1k import traffic_leaving_mm1k
 import random
+import numpy as np
 
 
 G = json2networkx("topologies/mesh5x5.json")
@@ -35,18 +36,17 @@ for flow_name, traffic in flows.items():
     for u, v in zip(dijkstra_path, dijkstra_path[1:]):
         G[u][v]['flows'][flow_name] = traffic
 
+# Create list of switches
+switches = []
+for node, attributes in G.nodes(data=True):
+    obj = attributes.get('data')
+
+    if isinstance(obj, Switch):
+        switches.append((node, attributes))
 
 for i in range(20):
 
     G_next = copy.deepcopy(G)
-
-    # Create list of switches
-    switches = []
-    for node, attributes in G.nodes(data=True):
-        obj = attributes.get('data')
-
-        if isinstance(obj, Switch):
-            switches.append((node, attributes))
 
     for switch, attributes in switches:
         incoming_flows = {}
@@ -125,7 +125,6 @@ for flow_name, traffic in flows.items():
             # Wzór standardowy dla rho < 1
             term1 = ro / (1 - ro)
             term2 = ((queue_capacity + 1) * (ro ** (queue_capacity + 1))) / (1 - (ro ** (queue_capacity + 1)))
-            L_system = term1 - term2
                     
         else: # ro > 1
             # Wzór przekształcony dla rho > 1 (korzysta z ujemnych potęg, by uniknąć nieskończoności)
@@ -181,13 +180,13 @@ for u, v, data in G.edges(data=True):
     
     # Możesz dodać minimalną grubość (np. 1.0), żeby krawędzie z ruchem 0 były widoczne
     # lub skalować wartości, jeśli ruch jest bardzo duży
-    widths.append(1.0 + traffic_sum * 0.5) 
+    widths.append(traffic_sum) 
     
     if traffic_sum > max_traffic:
         max_traffic = traffic_sum
 
 # Opcjonalnie: Normalizacja szerokości, jeśli wartości ruchu są bardzo duże
-widths = [1.0 + (w / max_traffic) * 5.0 for w in widths] if max_traffic > 0 else [1.0] * len(G.edges())
+widths = [1 + (w / max_traffic) * 3 for w in widths]
 
 pos = nx.kamada_kawai_layout(G)
 
@@ -211,4 +210,50 @@ nx.draw(
 
 # Dodanie legendy lub tytułu z informacją o skali
 plt.title(f"Wizualizacja obciążenia sieci (Max traffic: {max_traffic:.2f})")
+plt.show()
+
+no_of_switches = len(switches)
+
+AVTM_matrix = np.zeros((no_of_switches, no_of_switches))
+
+for switches_src, attributes_src in switches:
+    for switches_dst, attributes_dst in switches:
+        switch_src_index = int(switches_src) - 1
+        switch_dst_index = int(switches_dst) - 1 
+
+        if switches_src == switches_dst:
+            continue
+
+        if G.has_edge(switches_src, switches_dst):
+            
+            edge_data_flows = G[switches_src][switches_dst]['flows']
+
+            sum_of_flows = 0
+
+            for flow, value in edge_data_flows.items():
+                sum_of_flows += value
+            
+            AVTM_matrix[switch_src_index][switch_dst_index] = round(sum_of_flows,2)
+
+plt.figure(figsize=(12, 12))
+
+# We use imshow just to set the limits and aspect ratio, but make it invisible or very light background
+plt.imshow(AVTM_matrix, cmap='Greys', alpha=0.1)
+
+# Loop over data dimensions and create text annotations.
+rows, cols = AVTM_matrix.shape
+for i in range(rows):
+    for j in range(cols):
+        text = plt.text(j, i, str(AVTM_matrix[i, j]),
+                       ha="center", va="center", color="black", fontsize=8)
+
+plt.title('AVTM Matrix')
+# We can keep the ticks to show row/col indices
+# plt.xticks(np.arange(0, 25, 1))
+# plt.yticks(np.arange(0, 25, 1))
+plt.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
+
+# Remove the frame to look more like a raw printed matrix? 
+# Usually figures have frames. I'll keep the frame but make it look clean.
+plt.tight_layout()    
 plt.show()
