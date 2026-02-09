@@ -35,18 +35,17 @@ for flow_name, traffic in flows.items():
     for u, v in zip(dijkstra_path, dijkstra_path[1:]):
         G[u][v]['flows'][flow_name] = traffic
 
+# Create list of switches
+switches = []
+for node, attributes in G.nodes(data=True):
+    obj = attributes.get('data')
+
+    if isinstance(obj, Switch):
+        switches.append((node, attributes))
 
 for i in range(25):
 
     G_next = copy.deepcopy(G)
-
-    # Create list of switches
-    switches = []
-    for node, attributes in G.nodes(data=True):
-        obj = attributes.get('data')
-
-        if isinstance(obj, Switch):
-            switches.append((node, attributes))
 
     for switch, attributes in switches:
         incoming_flows = {}
