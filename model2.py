@@ -28,6 +28,7 @@ for flow in range(no_of_flows):
     random_traffic_rate = random.randint(10, 300)
     flows[(f"10.0.0.{random_hosts[0]}",f"10.0.0.{random_hosts[1]}")] = random_traffic_rate
 
+flows_paths = {}
 
 for flow_name, traffic in flows.items():
     dijkstra_path = nx.dijkstra_path(G, source = flow_name[0], target = flow_name[1], weight = "weight")
@@ -138,14 +139,14 @@ for flow_name, traffic in flows.items():
     dijkstra_path = nx.dijkstra_path(G, source = flow_name[0], target = flow_name[1], weight = "weight")
     print(f"{dijkstra_path = }")
 
-    total_delay = 0
+    total_flow_delay = 0
 
     for switch in dijkstra_path[1:-1]:
         total_delay += switches_delay[switch]
     
-    print(f"{round(total_delay,2) = }s")
+    print(f"{round(total_flow_delay,2) = }s")
 
-    delays.append(total_delay)
+    delays.append(total_flow_delay)
 
 average_delay_in_network = sum(delays) / len(delays)
 
