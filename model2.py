@@ -43,7 +43,7 @@ for node, attributes in G.nodes(data=True):
     if isinstance(obj, Switch):
         switches.append((node, attributes))
 
-for i in range(25):
+for i in range(18):
 
     G_next = copy.deepcopy(G)
 
@@ -90,6 +90,43 @@ for node in G.nodes(data=True):
     for neighbor, edge_attr in G[node_id].items():
         print(f"  -> {neighbor}: {edge_attr}")
 
+switches_delay = {}
+
+for switch, attributes in switches:
+    switch_obj = G.nodes[switch]["data"]
+
+    service_rate = switch_obj.service_rate
+    queue_capacity = switch_obj.queue_capacity
+
+    total_incoming = 0
+    for u, v, data in G.in_edges(switch, data=True):
+        total_incoming += sum(data.get('flows', {}).values())
+
+    total_outgoing = 0
+    for u, v, data in G.out_edges(switch, data=True):
+        total_outgoing += sum(data.get('flows', {}).values())
+    
+    ro = total_incoming / service_rate
+
+    if ro < 1.0:
+        # Wzór standardowy dla rho < 1
+        term1 = ro / (1 - ro)
+        term2 = ((queue_capacity + 1) * (ro ** (queue_capacity + 1))) / (1 - (ro ** (queue_capacity + 1)))
+                
+    else: # ro > 1
+        # Wzór przekształcony dla rho > 1 (korzysta z ujemnych potęg, by uniknąć nieskończoności)
+        # Term1: ro / (1 - ro) jest bezpieczne (daje ujemną liczbę)
+        term1 = ro / (1 - ro)
+                
+        # Term2: Dzielimy licznik i mianownik przez ro^(K+1)
+        # Otrzymujemy: (K+1) / (ro^(-K-1) - 1)
+        term2 = (queue_capacity + 1) / ((ro ** -(queue_capacity + 1)) - 1)
+    
+    L_system = term1 - term2
+
+    exp_delay_at_switch = L_system / total_outgoing
+
+    switches_delay[switch] = exp_delay_at_switch
 
 ### CALCULATING DELAY AND PACKET LOSS FOR EACH FLOW
 print("------------------------------------------")
@@ -104,41 +141,7 @@ for flow_name, traffic in flows.items():
     total_delay = 0
 
     for switch in dijkstra_path[1:-1]:
-
-        switch_obj = G.nodes[switch]["data"]
-
-        service_rate = switch_obj.service_rate
-        queue_capacity = switch_obj.queue_capacity
-
-        total_incoming = 0
-        for u, v, data in G.in_edges(switch, data=True):
-            total_incoming += sum(data.get('flows', {}).values())
-
-        total_outgoing = 0
-        for u, v, data in G.out_edges(switch, data=True):
-            total_outgoing += sum(data.get('flows', {}).values())
-        
-        ro = total_incoming / service_rate
-
-        if ro < 1.0:
-            # Wzór standardowy dla rho < 1
-            term1 = ro / (1 - ro)
-            term2 = ((queue_capacity + 1) * (ro ** (queue_capacity + 1))) / (1 - (ro ** (queue_capacity + 1)))
-                    
-        else: # ro > 1
-            # Wzór przekształcony dla rho > 1 (korzysta z ujemnych potęg, by uniknąć nieskończoności)
-            # Term1: ro / (1 - ro) jest bezpieczne (daje ujemną liczbę)
-            term1 = ro / (1 - ro)
-                    
-            # Term2: Dzielimy licznik i mianownik przez ro^(K+1)
-            # Otrzymujemy: (K+1) / (ro^(-K-1) - 1)
-            term2 = (queue_capacity + 1) / ((ro ** -(queue_capacity + 1)) - 1)
-        
-        L_system = term1 - term2
-
-        exp_delay_at_switch = L_system / total_outgoing
-
-        total_delay += exp_delay_at_switch
+        total_delay += switches_delay[switch]
     
     print(f"{round(total_delay,2) = }s")
 
