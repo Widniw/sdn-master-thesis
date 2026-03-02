@@ -1,5 +1,5 @@
 import numpy as np
-from stable_baselines3 import DDPG
+from stable_baselines3 import PPO
 from network_env import NetworkEnv
 
 def evaluate_model():
@@ -8,7 +8,7 @@ def evaluate_model():
     
     print("Loading the trained DDPG model...")
     try:
-        model = DDPG.load("ddpg_sdn_routing")
+        model = PPO.load("ppo_sdn_flow_routing")
     except FileNotFoundError:
         print("Error: 'ddpg_sdn_routing.zip' not found. Please run train.py first!")
         return
