@@ -25,7 +25,7 @@ class NetworkEnv(gym.Env):
         self.switches_delay = {}
         
         # Hyperparameters from the paper
-        self.alpha = 0.9  # Weight factor for delay vs packet loss 
+        self.alpha = 0.1  # Weight factor for delay vs packet loss 
         self.mu_max = 3000.0  # Max service rate [cite: 441]
         self.K_max = 10000.0  # Max queue capacity [cite: 441]
         self.max_hops = 25 # Absolute worst-case path length for scaling delay
@@ -71,15 +71,19 @@ class NetworkEnv(gym.Env):
         for u, v, data in self.G.edges(data=True):
             data['flows'] = {}
             
+        flows_paths = {}
+
         # 2. Route traffic using Dijkstra
         for flow_name, traffic in self.flows.items():
             path = nx.dijkstra_path(self.G, source=flow_name[0], target=flow_name[1], weight="weight")
+
+            flows_paths[flow_name] = path
+
             for u, v in zip(path, path[1:]):
                 self.G[u][v]['flows'][flow_name] = traffic
                 
-        for i in range(20):
-
-            G_next = copy.deepcopy(self.G)
+        for i in range(18):
+            temp_flows_on_edges = {}
 
             for switch, attributes in self.switches:
                 incoming_flows = {}
@@ -98,39 +102,43 @@ class NetworkEnv(gym.Env):
                     for flow_id, new_traffic_amount in flows_dict.items():
                         # flow_id to np. ("10.0.0.1", "10.0.0.2")
                         
-                            current_path = nx.dijkstra_path(self.G, source=flow_id[0], target=flow_id[1], weight="weight")
+                            current_path = flows_paths[flow_id]
                             
                             # Znajdujemy indeks obecnego switcha na ścieżce przepływu
                             curr_index = current_path.index(switch)
                             
                             # Sprawdzamy, czy to nie jest koniec ścieżki
-                            if curr_index + 1 < len(current_path):
-                                next_hop = current_path[curr_index + 1]
-                                
-                                # 2. Aktualizujemy krawędź WYCHODZĄCĄ w grafie G_next
-                                # Krawędź to (switch -> next_hop)
-                                                        
-                                # Nadpisujemy wartość przepływu nową, mniejszą wartością obliczoną przez MM1K
-                                G_next[switch][next_hop]['flows'][flow_id] = new_traffic_amount
+                            next_hop = current_path[curr_index + 1]
 
-                
-            self.G = G_next
+                            if (switch, next_hop) not in temp_flows_on_edges:
+                                temp_flows_on_edges[(switch, next_hop)] = {}          
+                                        
+                            # Nadpisujemy wartość przepływu nową, mniejszą wartością obliczoną przez MM1K
+                            temp_flows_on_edges[(switch, next_hop)][flow_id] = new_traffic_amount
+    
+            for (u, v), _flows in temp_flows_on_edges.items():
+                for _flow_id, _traffic in _flows.items():
+                    self.G[u][v]['flows'][_flow_id] = _traffic
 
         self.switches_delay = {}
 
         for switch, attributes in self.switches:
-            switch_obj = self.G.nodes[switch]["data"]
-
-            service_rate = switch_obj.service_rate
-            queue_capacity = switch_obj.queue_capacity
-
             total_incoming = 0
             for u, v, data in self.G.in_edges(switch, data=True):
                 total_incoming += sum(data.get('flows', {}).values())
 
+            if total_incoming == 0:
+                self.switches_delay[switch] = 0
+                continue
+
             total_outgoing = 0
             for u, v, data in self.G.out_edges(switch, data=True):
                 total_outgoing += sum(data.get('flows', {}).values())
+
+            switch_obj = self.G.nodes[switch]["data"]
+
+            service_rate = switch_obj.service_rate
+            queue_capacity = switch_obj.queue_capacity
             
             ro = total_incoming / service_rate
 
@@ -156,7 +164,6 @@ class NetworkEnv(gym.Env):
             exp_delay_at_switch = L_system / total_outgoing
 
             self.switches_delay[switch] = exp_delay_at_switch
-
         
         delays = []
         total_incoming_network = 0

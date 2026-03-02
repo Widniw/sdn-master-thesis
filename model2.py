@@ -33,6 +33,8 @@ flows_paths = {}
 for flow_name, traffic in flows.items():
     dijkstra_path = nx.dijkstra_path(G, source = flow_name[0], target = flow_name[1], weight = "weight")
 
+    flows_paths[flow_name] = dijkstra_path
+
     for u, v in zip(dijkstra_path, dijkstra_path[1:]):
         G[u][v]['flows'][flow_name] = traffic
 
@@ -44,9 +46,9 @@ for node, attributes in G.nodes(data=True):
     if isinstance(obj, Switch):
         switches.append((node, attributes))
 
-for i in range(18):
 
-    G_next = copy.deepcopy(G)
+for i in range(18):
+    temp_flows_on_edges = {}
 
     for switch, attributes in switches:
         incoming_flows = {}
@@ -65,23 +67,25 @@ for i in range(18):
             for flow_id, new_traffic_amount in flows_dict.items():
                 # flow_id to np. ("10.0.0.1", "10.0.0.2")
                 
-                    current_path = nx.dijkstra_path(G, source=flow_id[0], target=flow_id[1], weight="weight")
+                    current_path = flows_paths[flow_id]
                     
                     # Znajdujemy indeks obecnego switcha na ścieżce przepływu
                     curr_index = current_path.index(switch)
                     
                     # Sprawdzamy, czy to nie jest koniec ścieżki
-                    if curr_index + 1 < len(current_path):
-                        next_hop = current_path[curr_index + 1]
-                        
-                        # 2. Aktualizujemy krawędź WYCHODZĄCĄ w grafie G_next
-                        # Krawędź to (switch -> next_hop)
-                                                
-                        # Nadpisujemy wartość przepływu nową, mniejszą wartością obliczoną przez MM1K
-                        G_next[switch][next_hop]['flows'][flow_id] = new_traffic_amount
+                    next_hop = current_path[curr_index + 1]
+
+                    if (switch, next_hop) not in temp_flows_on_edges:
+                        temp_flows_on_edges[(switch, next_hop)] = {}          
+                                  
+                    # Nadpisujemy wartość przepływu nową, mniejszą wartością obliczoną przez MM1K
+                    temp_flows_on_edges[(switch, next_hop)][flow_id] = new_traffic_amount
+    
+    for (u, v), _flows in temp_flows_on_edges.items():
+        for _flow_id, _traffic in _flows.items():
+            G[u][v]['flows'][_flow_id] = _traffic
 
         
-    G = G_next
 
 # Print DiGraph for debbuging purposes
 print("G as text:")
@@ -94,19 +98,23 @@ for node in G.nodes(data=True):
 switches_delay = {}
 
 for switch, attributes in switches:
+    total_incoming = 0
+    for u, v, data in G.in_edges(switch, data=True):
+        total_incoming += sum(data.get('flows', {}).values())
+
+    if total_incoming == 0:
+        switches_delay[switch] = 0
+        continue
+
+    total_outgoing = 0
+    for u, v, data in G.out_edges(switch, data=True):
+        total_outgoing += sum(data.get('flows', {}).values())
+
     switch_obj = G.nodes[switch]["data"]
 
     service_rate = switch_obj.service_rate
     queue_capacity = switch_obj.queue_capacity
 
-    total_incoming = 0
-    for u, v, data in G.in_edges(switch, data=True):
-        total_incoming += sum(data.get('flows', {}).values())
-
-    total_outgoing = 0
-    for u, v, data in G.out_edges(switch, data=True):
-        total_outgoing += sum(data.get('flows', {}).values())
-    
     ro = total_incoming / service_rate
 
     if ro < 1.0:
@@ -142,7 +150,7 @@ for flow_name, traffic in flows.items():
     total_flow_delay = 0
 
     for switch in dijkstra_path[1:-1]:
-        total_delay += switches_delay[switch]
+        total_flow_delay += switches_delay[switch]
     
     print(f"{round(total_flow_delay,2) = }s")
 
