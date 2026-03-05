@@ -1,13 +1,22 @@
 import numpy as np
 from stable_baselines3 import DDPG
 from stable_baselines3.common.noise import OrnsteinUhlenbeckActionNoise
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv
 from network_env import NetworkEnv
 
 def main():
-    print("Initializing Network Environment...")
-    env = NetworkEnv()
+    print("Initializing Multi-Process Network Environment...")
+    
+    # 1. Define the number of parallel processes (CPU cores) you want to use
+    n_envs = 4
+
+    # 2. Wrap your custom environment in the SubprocVecEnv
+    # This automatically spins up 4 independent background processes
+    env = make_vec_env(NetworkEnv, n_envs=n_envs, vec_env_cls=SubprocVecEnv)
 
     # The article uses the Ornstein-Uhlenbeck process to produce exploration noise
+    # Note: SB3 automatically scales this noise across all 4 processes behind the scenes!
     n_actions = env.action_space.shape[-1]
     action_noise = OrnsteinUhlenbeckActionNoise(
         mean=np.zeros(n_actions), 
@@ -15,7 +24,6 @@ def main():
     )
 
     # The article specifies two fully-connected hidden layers with 400 and 300 units 
-    # for both the actor network and the critic network
     policy_kwargs = dict(
         net_arch=dict(
             pi=[400, 300], # Actor (Policy) network architecture
@@ -36,7 +44,9 @@ def main():
         gamma=0.99,                 # Discount factor
         learning_starts=100,        # Collect 100 transitions before learning begins
         verbose=1,                  # Print training progress to console
-        device="auto"               # Automatically use GPU (CUDA) if available
+        device="auto",               # Automatically use GPU (CUDA) if available
+        train_freq=1,         # Tell the AI to train after every single step 
+        gradient_steps=-1     # The magic SB3 code for: "Do exactly as many brain updates as the number of environments running!"
     )
 
     # Train the model
