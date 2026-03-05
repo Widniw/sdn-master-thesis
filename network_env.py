@@ -1,8 +1,6 @@
 from utils import json2networkx
 from switch import Switch
-import matplotlib.pyplot as plt
 import networkx as nx
-import copy
 from traffic_leaving_mm1k import traffic_leaving_mm1k
 import random
 import numpy as np
@@ -25,7 +23,7 @@ class NetworkEnv(gym.Env):
         self.switches_delay = {}
         
         # Hyperparameters from the paper
-        self.alpha = 0.1  # Weight factor for delay vs packet loss 
+        self.alpha = 0.9  # Weight factor for delay vs packet loss 
         self.mu_max = 3000.0  # Max service rate [cite: 441]
         self.K_max = 10000.0  # Max queue capacity [cite: 441]
         self.max_hops = 25 # Absolute worst-case path length for scaling delay
@@ -173,12 +171,12 @@ class NetworkEnv(gym.Env):
             total_incoming_network += traffic
 
             # print(f"For flow {flow_name} with traffic volume: {traffic}")
-            dijkstra_path = nx.dijkstra_path(self.G, source = flow_name[0], target = flow_name[1], weight = "weight")
+            path = flows_paths[flow_name]
             # print(f"{dijkstra_path = }")
 
             total_delay = 0
 
-            for switch in dijkstra_path[1:-1]:
+            for switch in path[1:-1]:
                 total_delay += self.switches_delay[switch]
             
             # print(f"{round(total_delay,2) = }s")

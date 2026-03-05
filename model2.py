@@ -2,7 +2,6 @@ from utils import json2networkx
 from switch import Switch
 import matplotlib.pyplot as plt
 import networkx as nx
-import copy
 from traffic_leaving_mm1k import traffic_leaving_mm1k
 import random
 import numpy as np
