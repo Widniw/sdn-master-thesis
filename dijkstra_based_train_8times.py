@@ -52,7 +52,7 @@ def train_single_model(seed_value, n_envs=4, total_timesteps=200000):
         batch_size=100,             
         gamma=0.99,                 
         learning_starts=100,        
-        verbose=0,                  # Set to 0 so your console doesn't get flooded with 8 models of text
+        verbose=1,                  # Set to 0 so your console doesn't get flooded with 8 models of text
         device="cpu",               
         train_freq=1,         
         gradient_steps=-1,
@@ -74,7 +74,7 @@ def train_single_model(seed_value, n_envs=4, total_timesteps=200000):
 def main():
     # Define the 8 random seeds we want to test
     # You can literally use any integers here (e.g., 10, 20, 30...)
-    seeds_to_test = [42, 123, 777, 999, 2026, 5555, 8888, 12345]
+    seeds_to_test = [1001, 1002, 1003]
     
     print(f"Starting batch training for {len(seeds_to_test)} different models.")
     
