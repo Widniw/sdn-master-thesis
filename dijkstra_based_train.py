@@ -38,7 +38,7 @@ def main():
         env, 
         action_noise=action_noise,
         policy_kwargs=policy_kwargs,
-        learning_rate=0.00001,      # Both actor and critic learning rates are set to 10^-5
+        learning_rate=0.001,      # Both actor and critic learning rates are set to 10^-5
         buffer_size=50000,          # Replay buffer size
         batch_size=100,             # Mini batch size
         gamma=0.99,                 # Discount factor
