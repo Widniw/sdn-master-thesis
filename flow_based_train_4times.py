@@ -35,10 +35,11 @@ def train_single_ppo_model(seed_value, n_envs=4, total_timesteps=200000):
     model = PPO(
         "MlpPolicy", 
         env, 
-        learning_rate=0.0001,    # Lowered from 0.0003 to stop the violent KL divergence
+        learning_rate=0.00005,   # Dropped even lower (5e-5) for extreme stability
         n_steps=1024,            
-        batch_size=256,          # Increased from 64 to 256 to give stable, less noisy gradients
-        ent_coef=0.0,            # TURNED OFF: With 150x20 choices, natural exploration is enough!
+        batch_size=1024,         # MASSIVELY INCREASED (from 256) so it calculates the gradient using the whole rollout!
+        ent_coef=0.0,            
+        target_kl=0.05,          # THE MAGIC KILL SWITCH: If KL hits 0.05, PPO instantly aborts the update to save the brain.
         policy_kwargs=policy_kwargs, 
         verbose=1,                  
         device="cpu",               
