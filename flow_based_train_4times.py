@@ -32,18 +32,17 @@ def train_single_ppo_model(seed_value, n_envs=4, total_timesteps=200000):
     )
 
     print("Building the PPO Agent...")
-    # 4. Initialize the PPO model and pass the seed directly to it!
     model = PPO(
         "MlpPolicy", 
         env, 
-        learning_rate=0.0003,    
+        learning_rate=0.0001,    # Lowered from 0.0003 to stop the violent KL divergence
         n_steps=1024,            
-        batch_size=64,             
-        ent_coef=0.01,           
+        batch_size=256,          # Increased from 64 to 256 to give stable, less noisy gradients
+        ent_coef=0.0,            # TURNED OFF: With 150x20 choices, natural exploration is enough!
         policy_kwargs=policy_kwargs, 
-        verbose=1, # Set to 0 if you want less console spam while you sleep                 
-        device="cpu",
-        seed=seed_value          # <--- THE CRITICAL PIECE
+        verbose=1,                  
+        device="cpu",               
+        seed=seed_value          
     )
 
     # 5. Train the model
