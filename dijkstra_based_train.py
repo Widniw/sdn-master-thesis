@@ -41,6 +41,17 @@ def main():
         env, 
         action_noise=action_noise,
         policy_kwargs=policy_kwargs,
+<<<<<<< HEAD
+        learning_rate=0.001,      # Both actor and critic learning rates are set to 10^-5
+        buffer_size=50000,          # Replay buffer size
+        batch_size=100,             # Mini batch size
+        gamma=0.99,                 # Discount factor
+        learning_starts=100,        # Collect 100 transitions before learning begins
+        verbose=1,                  # Print training progress to console
+        device="auto",               # Automatically use GPU (CUDA) if available
+        train_freq=1,         # Tell the AI to train after every single step 
+        gradient_steps=-1     # The magic SB3 code for: "Do exactly as many brain updates as the number of environments running!"
+=======
         learning_rate=0.001,        # Using the faster, stable learning rate
         buffer_size=50000,          
         batch_size=100,             
@@ -50,6 +61,7 @@ def main():
         device="auto",               
         train_freq=1,         
         gradient_steps=-1     
+>>>>>>> 806f31b4f4169374c741f8ba809698aaba45cc1b
     )
 
     total_timesteps = 200000 
