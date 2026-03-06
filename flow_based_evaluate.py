@@ -8,7 +8,7 @@ def evaluate_model():
     
     print("Loading the trained DDPG model...")
     try:
-        model = PPO.load("ppo_sdn_flow_routing")
+        model = PPO.load("ppo_sdn_flow_routing_seed_2004")
     except FileNotFoundError:
         print("Error: 'ddpg_sdn_routing.zip' not found. Please run train.py first!")
         return

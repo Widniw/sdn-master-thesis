@@ -34,7 +34,7 @@ class NetworkEnv(gym.Env):
         self.max_hops = 25 # Absolute worst-case path length for scaling delay
 
         self.no_of_flows = 150
-        self.k_paths = 5
+        self.k_paths = 2
 
         self.action_space = spaces.MultiDiscrete([self.k_paths] * self.no_of_flows)
 

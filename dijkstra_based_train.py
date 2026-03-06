@@ -59,7 +59,7 @@ def main():
 
     # Save the fully trained model
     print("Training complete! Saving model to 'ddpg_sdn_routing.zip'...")
-    model.save("ddpg_sdn_routing")
+    model.save("ddpg_sdn_routing_same_flows")
 
     # CRITICAL: Save the VecNormalize statistics
     # If you do not save this, the model will be blind during evaluation!

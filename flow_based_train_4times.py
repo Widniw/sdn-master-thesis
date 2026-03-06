@@ -60,7 +60,7 @@ def train_single_ppo_model(seed_value, n_envs=4, total_timesteps=200000):
 
 def main():
     # Define the 4 random seeds we want to test for PPO
-    seeds_to_test = [2001, 2002, 2003, 2004]
+    seeds_to_test = [123]
     
     print(f"Starting batch training for {len(seeds_to_test)} different PPO models.")
     

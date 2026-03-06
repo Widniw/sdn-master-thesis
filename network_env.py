@@ -45,11 +45,13 @@ class NetworkEnv(gym.Env):
         super().reset(seed=seed)
         
         self.flows = {}
+
+        temp_random = random.Random(42)
         
         # Generate 150 random flows with demand between 10 and 300 [cite: 442]
         for _ in range(150):
-            random_hosts = random.sample(range(1, 26), 2)
-            traffic_rate = random.randint(10, 300)
+            random_hosts = temp_random.sample(range(1, 26), 2)
+            traffic_rate = temp_random.randint(10, 300)
             self.flows[(f"10.0.0.{random_hosts[0]}", f"10.0.0.{random_hosts[1]}")] = traffic_rate
             
         # Initialize default weights to 1
