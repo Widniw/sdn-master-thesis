@@ -24,7 +24,7 @@ no_of_flows = 150
 
 for flow in range(no_of_flows):
     random_hosts = random.sample(range(1, 26), 2)
-    random_traffic_rate = random.randint(10, 300)
+    random_traffic_rate = random.uniform(10, 300)
     flows[(f"10.0.0.{random_hosts[0]}",f"10.0.0.{random_hosts[1]}")] = random_traffic_rate
 
 flows_paths = {}
@@ -109,12 +109,17 @@ for switch, attributes in switches:
     for u, v, data in G.out_edges(switch, data=True):
         total_outgoing += sum(data.get('flows', {}).values())
 
+    print(f"switch {switch} total outgoing = {total_outgoing =}")
+
     switch_obj = G.nodes[switch]["data"]
 
     service_rate = switch_obj.service_rate
     queue_capacity = switch_obj.queue_capacity
 
     ro = total_incoming / service_rate
+
+    if ro == 1:
+        L_system = queue_capacity / 2
 
     if ro < 1.0:
         # Wzór standardowy dla rho < 1
@@ -131,6 +136,8 @@ for switch, attributes in switches:
         term2 = (queue_capacity + 1) / ((ro ** -(queue_capacity + 1)) - 1)
     
     L_system = term1 - term2
+
+    print(f"switch {switch} l system = {L_system}")
 
     exp_delay_at_switch = L_system / total_outgoing
 
@@ -151,13 +158,18 @@ for flow_name, traffic in flows.items():
     for switch in dijkstra_path[1:-1]:
         total_flow_delay += switches_delay[switch]
     
+    final_traffic = G[dijkstra_path[-2]][dijkstra_path[-1]]['flows'][flow_name]
+    
     print(f"{round(total_flow_delay,2) = }s")
+    print(f"At the end traffic was: {final_traffic}")
 
     delays.append(total_flow_delay)
 
 average_delay_in_network = sum(delays) / len(delays)
+median_delay = np.median(delays)
 
 print(f"Average delay = {round(average_delay_in_network,2)}s")
+print(f"Median delay = {median_delay}")
 
 print("---------------------")
 print("Packet loss for each switch")
