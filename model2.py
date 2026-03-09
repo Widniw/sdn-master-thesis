@@ -5,9 +5,15 @@ import networkx as nx
 from traffic_leaving_mm1k import traffic_leaving_mm1k
 import random
 import numpy as np
+from pathlib import Path
 
+base_dir = Path(__file__).resolve().parent
+topology_path = base_dir / "topologies" / "mesh5x5.json"
 
-G = json2networkx("topologies/mesh5x5.json")
+G = json2networkx(topology_path)
+switches = [(node, attr) for node, attr in G.nodes(data=True) if isinstance(attr.get('data'), Switch)]
+no_of_switches = len(switches)
+AVTM_matrix = np.zeros((no_of_switches, no_of_switches), dtype=np.float32)
 
 # flows = {("10.0.0.1", "10.0.0.2"): 3,
 #          ("10.0.0.2", "10.0.0.1"): 2}
@@ -23,9 +29,9 @@ flows = {}
 no_of_flows = 150
 
 for flow in range(no_of_flows):
-    random_hosts = random.sample(range(1, 26), 2)
+    random_hosts = random.sample(range(0, 25), 2)
     random_traffic_rate = random.uniform(10, 300)
-    flows[(f"10.0.0.{random_hosts[0]}",f"10.0.0.{random_hosts[1]}")] = random_traffic_rate
+    flows[(f"10.0.1.{random_hosts[0]}",f"10.0.1.{random_hosts[1]}")] = random_traffic_rate
 
 flows_paths = {}
 
@@ -36,14 +42,6 @@ for flow_name, traffic in flows.items():
 
     for u, v in zip(dijkstra_path, dijkstra_path[1:]):
         G[u][v]['flows'][flow_name] = traffic
-
-# Create list of switches
-switches = []
-for node, attributes in G.nodes(data=True):
-    obj = attributes.get('data')
-
-    if isinstance(obj, Switch):
-        switches.append((node, attributes))
 
 
 for i in range(18):
