@@ -18,13 +18,13 @@ def main():
     # 3. Apply VecNormalize
     # This automatically scales observations and rewards to have a mean of 0 and std of 1.
     # It also clips extreme outliers to prevent gradient explosions.
-    env = VecNormalize(env, norm_obs=False, norm_reward=False, clip_obs=10.0)
+    # env = VecNormalize(env, norm_obs=False, norm_reward=False, clip_obs=10.0)
 
     # The article uses the Ornstein-Uhlenbeck process to produce exploration noise
     n_actions = env.action_space.shape[-1]
     action_noise = OrnsteinUhlenbeckActionNoise(
         mean=np.zeros(n_actions), 
-        sigma=0.3 * np.ones(n_actions) 
+        sigma=0.2 * np.ones(n_actions) 
     )
 
     # The article specifies two fully-connected hidden layers with 400 and 300 units 
@@ -64,8 +64,8 @@ def main():
 
     # CRITICAL: Save the VecNormalize statistics
     # If you do not save this, the model will be blind during evaluation!
-    print("Saving VecNormalize statistics to 'vec_normalize.pkl'...")
-    env.save("vec_normalize.pkl")
+    # print("Saving VecNormalize statistics to 'vec_normalize.pkl'...")
+    # env.save("vec_normalize.pkl")
 
     # Close the environment
     env.close()
