@@ -18,13 +18,13 @@ def main():
     # 3. Apply VecNormalize
     # This automatically scales observations and rewards to have a mean of 0 and std of 1.
     # It also clips extreme outliers to prevent gradient explosions.
-    env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0, clip_reward=10.0)
+    env = VecNormalize(env, norm_obs=False, norm_reward=False, clip_obs=10.0)
 
     # The article uses the Ornstein-Uhlenbeck process to produce exploration noise
     n_actions = env.action_space.shape[-1]
     action_noise = OrnsteinUhlenbeckActionNoise(
         mean=np.zeros(n_actions), 
-        sigma=0.2 * np.ones(n_actions) 
+        sigma=0.3 * np.ones(n_actions) 
     )
 
     # The article specifies two fully-connected hidden layers with 400 and 300 units 
@@ -41,15 +41,16 @@ def main():
         env, 
         action_noise=action_noise,
         policy_kwargs=policy_kwargs,
-        learning_rate=0.01,      # Both actor and critic learning rates are set to 10^-5
-        buffer_size=50000,          # Replay buffer size
-        batch_size=100,             # Mini batch size
-        gamma=0.99,                 # Discount factor
-        learning_starts=100,        # Collect 100 transitions before learning begins
-        verbose=1,                  # Print training progress to console
-        device="cpu",               # Automatically use GPU (CUDA) if available
-        train_freq=1,         # Tell the AI to train after every single step 
-        gradient_steps=-1     # The magic SB3 code for: "Do exactly as many brain updates as the number of environments running!"
+        learning_rate=0.00001,       # Dropped to a safe, stable value (10x faster than paper, but safe)
+        buffer_size=50000,   
+        tau=0.00001,       
+        batch_size=100,             
+        gamma=0.99,                 
+        learning_starts=1000,       # Let it wander randomly for 1000 steps before doing any math
+        verbose=1,                  
+        device="cuda",               
+        train_freq=1,         
+        gradient_steps=-1     
     )
 
     total_timesteps = 200000 

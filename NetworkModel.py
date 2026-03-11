@@ -8,11 +8,12 @@ import networkx as nx
 class NetworkModel:
     def __init__(self, G):
         self.G = G
-        self.switches = [(node, attr) for node, attr in G.nodes(data=True) if isinstance(attr.get('data'), Switch)]
-        self.no_of_nodes = len(G.nodes)
+        self.switches = [(node, attr) for node, attr in self.G.nodes(data=True) if isinstance(attr.get('data'), Switch)]
+        self.no_of_nodes = len(self.G.nodes)
         self.no_of_switches = len(self.switches)
-        self.edges = [edge for edge in G.edges()]
+        self.edges = [edge for edge in self.G.edges()]
         self.no_of_edges = len(self.edges)
+        self.mu_max = 3000
 
         self.node_to_index = {}
         for i, node in enumerate(self.G.nodes()):
@@ -170,7 +171,13 @@ class NetworkModel:
                 u_idx = self.node_to_index[src_switch]
                 v_idx = self.node_to_index[dst_switch]
 
-                switch_AVTM_matrix[int(src_switch)][int(dst_switch)] = self.full_AVTM_matrix[u_idx, v_idx, :].sum()
+                raw_traffic = self.full_AVTM_matrix[u_idx, v_idx, :].sum()
+
+                # 2. IMPLEMENT EQUATION 10: Normalize and bound to [0, 1]
+                normalized_traffic = min(1.0, raw_traffic / self.mu_max)
+
+                # 3. Store in the final ATVM matrix
+                switch_AVTM_matrix[int(src_switch)][int(dst_switch)] = normalized_traffic
 
         return avg_delay, total_packet_loss, switch_AVTM_matrix
                 
@@ -179,26 +186,45 @@ if __name__ == '__main__':
     topology_path = base_dir / "topologies" / "mesh5x5.json"
 
     G = json2networkx(topology_path)
+    model = NetworkModel(G)
 
+    alpha = 0.9
+    mu_max = 3000
+    K_max = 10000
+    max_hops = 25
+    
     flows_traffic = {}
     no_of_flows = 150
+    temp_random = random.Random(42)
+    total_incoming_network = 0
     for flow in range(no_of_flows):
-        random_hosts = random.sample(range(0, 25), 2)
-        random_traffic_rate = random.uniform(10, 300)
+        random_hosts = temp_random.sample(range(0, 25), 2)
+        random_traffic_rate = temp_random.uniform(10, 300)
+        total_incoming_network += random_traffic_rate
         flows_traffic[(f"10.0.1.{random_hosts[0]}",f"10.0.1.{random_hosts[1]}")] = random_traffic_rate
 
     # flows_traffic = {("10.0.1.0", "10.0.1.1"): 3,
     #          ("10.0.1.1", "10.0.1.0"): 2} 
 
-    all_paths = dict(nx.all_pairs_dijkstra_path(G, weight="weight"))
+    all_paths = dict(nx.all_pairs_dijkstra_path(model.G, weight="weight"))
 
     flows_paths = {}
     for (src, dst), traffic in flows_traffic.items():
         path = all_paths[src][dst] 
         flows_paths[(src, dst)] = path
 
-    model = NetworkModel(G)
+    
     avg_delay, total_packet_loss, switch_AVTM_matrix = model.calculate_measurements(flows_traffic, flows_paths)
     print(f"{avg_delay =}")
     print(f"{total_packet_loss = }")
     print(f"{switch_AVTM_matrix = }")
+
+    max_possible_delay = max_hops * (K_max / mu_max)
+    
+    # rd(t) and rp(t) formulas [cite: 296, 330]
+    r_d = 1.0 - min(avg_delay / max_possible_delay, 1.0)
+    r_p = 1.0 - min(total_packet_loss / total_incoming_network, 1.0) if total_incoming_network > 0 else 1.0
+    
+    # Total Reward R(st, at) 
+    reward = alpha * r_d + (1 - alpha) * r_p
+    print(f"{reward = }")
