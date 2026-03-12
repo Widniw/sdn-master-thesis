@@ -56,11 +56,11 @@ def main():
     total_timesteps = 200000 
     print(f"Starting training for {total_timesteps} iterations. This may take a while depending on your CPU/GPU...")
     
-    model.learn(total_timesteps=total_timesteps, log_interval=10)
+    model.learn(total_timesteps=total_timesteps, log_interval=100)
 
     # Save the fully trained model
     print("Training complete! Saving model to 'ddpg_sdn_routing.zip'...")
-    model.save("ddpg_sdn_routing_same_flows")
+    model.save("ddpg_sdn_routing_article_universal_model")
 
     # CRITICAL: Save the VecNormalize statistics
     # If you do not save this, the model will be blind during evaluation!
