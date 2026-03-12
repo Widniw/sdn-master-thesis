@@ -33,7 +33,7 @@ class NetworkEnv(gym.Env):
         # Shape is (25, 25) flattened to 1D for the neural network
         self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(self.model.no_of_switches * self.model.no_of_switches,), dtype=np.float32)
 
-        self.max_steps = 10
+        self.max_steps = 1
         self.current_step = 0
 
         self.max_possible_delay = self.max_hops * (self.K_max / self.mu_max)
