@@ -1,7 +1,5 @@
 from utils import json2networkx
-from switch import Switch
 import networkx as nx
-from traffic_leaving_mm1k import traffic_leaving_mm1k
 import random
 import numpy as np
 import gymnasium as gym
@@ -35,7 +33,7 @@ class NetworkEnv(gym.Env):
         # Shape is (25, 25) flattened to 1D for the neural network
         self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(self.model.no_of_switches * self.model.no_of_switches,), dtype=np.float32)
 
-        self.max_steps = 100
+        self.max_steps = 10
         self.current_step = 0
 
         self.max_possible_delay = self.max_hops * (self.K_max / self.mu_max)
@@ -48,11 +46,10 @@ class NetworkEnv(gym.Env):
         
         self.flows_traffic = {}
         no_of_flows = 150
-        temp_random = random.Random(42)
         self.total_incoming_network = 0
         for _ in range(no_of_flows):
-            random_hosts = temp_random.sample(range(0, 25), 2)
-            traffic_rate = temp_random.uniform(10, 300)
+            random_hosts = random.sample(range(0, 25), 2)
+            traffic_rate = random.uniform(10, 300)
             self.total_incoming_network += traffic_rate
             self.flows_traffic[(f"10.0.1.{random_hosts[0]}", f"10.0.1.{random_hosts[1]}")] = traffic_rate
             
