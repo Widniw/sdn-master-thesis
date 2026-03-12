@@ -8,7 +8,7 @@ def evaluate_model():
     
     print("Loading the trained DDPG model...")
     try:
-        model = DDPG.load("ddpg_sdn_routing_seed_777")
+        model = DDPG.load("ddpg_sdn_routing_article_universal_model")
     except FileNotFoundError:
         print("Error: 'ddpg_sdn_routing.zip' not found. Please run train.py first!")
         return
