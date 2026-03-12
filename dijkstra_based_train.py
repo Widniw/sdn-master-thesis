@@ -4,7 +4,7 @@ from stable_baselines3.common.noise import OrnsteinUhlenbeckActionNoise
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize # Added VecNormalize
 
-from network_env import NetworkEnv
+from flow_based_network_env import NetworkEnv
 
 def main():
     print("Initializing Multi-Process Network Environment...")
@@ -29,11 +29,11 @@ def main():
 
     # The article specifies two fully-connected hidden layers with 400 and 300 units 
     policy_kwargs = dict(
-        net_arch=dict(
-            pi=[400, 300], 
-            qf=[400, 300]  
+            net_arch=dict(
+                pi=[2048, 1024], # The Actor (chooses the 625 paths)
+                qf=[2048, 1024]  # The Critic (judges the choices)
+            )
         )
-    )
 
     print("Building the DDPG Agent...")
     model = DDPG(
@@ -53,14 +53,14 @@ def main():
         gradient_steps=-1     
     )
 
-    total_timesteps = 200000 
+    total_timesteps = 300000 
     print(f"Starting training for {total_timesteps} iterations. This may take a while depending on your CPU/GPU...")
     
     model.learn(total_timesteps=total_timesteps, log_interval=100)
 
     # Save the fully trained model
     print("Training complete! Saving model to 'ddpg_sdn_routing.zip'...")
-    model.save("ddpg_sdn_routing_article_universal_model")
+    model.save("ddpg_sdn_routing_flow_based_universal_model")
 
     # CRITICAL: Save the VecNormalize statistics
     # If you do not save this, the model will be blind during evaluation!
