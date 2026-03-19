@@ -41,7 +41,7 @@ class NetworkEnv(gym.Env):
                 if src != dst:
                     self.all_k_paths[(src, dst)] = list(itertools.islice(nx.shortest_simple_paths(self.G, src, dst), self.k_paths))
         print("Path pre-computation complete!")
-        
+
         # --- THE NEW ACTION SPACE ---
         # 625 discrete path choices (mapped from continuous [0.0, 0.999])
         # Index i = (src_idx * 25) + dst_idx
@@ -51,7 +51,7 @@ class NetworkEnv(gym.Env):
         # State: ATVM (625) + SDM/Traffic Demand Matrix (625) = 1250 total inputs
         self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(1250,), dtype=np.float32)
 
-        self.max_steps = 10 # 10 steps per episode to let the gradients stabilize
+        self.max_steps = 1 # 10 steps per episode to let the gradients stabilize
         self.current_step = 0
         self.max_possible_delay = self.max_hops * (self.K_max / self.mu_max)
 
@@ -63,7 +63,7 @@ class NetworkEnv(gym.Env):
         self.flows_paths = {}
         self.total_incoming_network = 0
         
-        # Initialize an empty Traffic Demand Matrix (SDM)
+        # Initialize an empty Source Destination Matrix (SDM)
         self.SDM = np.zeros((25, 25), dtype=np.float32)
         
         # Generate random traffic
