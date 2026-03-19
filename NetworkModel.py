@@ -116,17 +116,15 @@ class NetworkModel:
 
                 total_outgoing = self.full_AVTM_matrix[v_idx, :, :].sum()
 
-                service_rate = attributes["data"].service_rate,
+                service_rate = attributes["data"].service_rate
                 queue_capacity = attributes["data"].queue_capacity
                 ro = total_incoming / service_rate        
 
                 if ro == 1:
                     L_system = queue_capacity / total_outgoing
-
-                if ro < 1.0:
+                elif ro < 1.0:
                     term1 = ro / (1 - ro)
-                    term2 = ((queue_capacity + 1) * (ro ** (queue_capacity + 1))) / (1 - (ro ** (queue_capacity + 1)))
-                            
+                    term2 = ((queue_capacity + 1) * (ro ** (queue_capacity + 1))) / (1 - (ro ** (queue_capacity + 1)))    
                 else: # ro > 1
                     term1 = ro / (1 - ro)
                     term2 = (queue_capacity + 1) / ((ro ** -(queue_capacity + 1)) - 1)
@@ -195,11 +193,10 @@ if __name__ == '__main__':
     
     flows_traffic = {}
     no_of_flows = 150
-    temp_random = random.Random(42)
     total_incoming_network = 0
     for flow in range(no_of_flows):
-        random_hosts = temp_random.sample(range(0, 25), 2)
-        random_traffic_rate = temp_random.uniform(10, 300)
+        random_hosts = random.sample(range(0, 25), 2)
+        random_traffic_rate = random.uniform(10, 300)
         total_incoming_network += random_traffic_rate
         flows_traffic[(f"10.0.1.{random_hosts[0]}",f"10.0.1.{random_hosts[1]}")] = random_traffic_rate
 
