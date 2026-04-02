@@ -63,3 +63,13 @@ def traffic_leaving_mm1k(incoming_flows, service_rate, queue_capacity):
         outgoing_flows[edge] = new_flows_dict
 
     return outgoing_flows
+
+
+if __name__ == "__main__":
+    service_rate = 4
+    queue_capacity = 2
+    incoming_flows = {1: {(".3", ".1"): 3,
+                          (".2",".0"): 4}}
+
+    outgoing_flows = traffic_leaving_mm1k(incoming_flows, service_rate, queue_capacity)
+    print(outgoing_flows)

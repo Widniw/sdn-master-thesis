@@ -43,6 +43,7 @@ class NetworkEnv(gym.Env):
         self.current_step = 0
 
         super().reset(seed=seed)
+        random.seed(seed)
         
         self.flows_traffic = {}
         no_of_flows = 150
@@ -99,6 +100,6 @@ class NetworkEnv(gym.Env):
         self.current_step += 1
         terminated = False 
         truncated = self.current_step >= self.max_steps # Ends the episode after 100 steps
-        info = {'avg_delay': avg_delay, 'packet_loss': total_packet_loss}
+        info = {'avg_delay': avg_delay, 'packet_loss': total_packet_loss, 'flows_paths': self.flows_paths}
         
-        return next_state, reward, terminated, truncated, info
+        return next_state, reward, terminated, truncated, info,

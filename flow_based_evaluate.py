@@ -13,7 +13,7 @@ def evaluate_model():
         print("Error: 'ddpg_sdn_routing.zip' not found. Please run train.py first!")
         return
 
-    num_episodes = 10
+    num_episodes = 100
     total_delays = []
     total_packet_losses = []
 

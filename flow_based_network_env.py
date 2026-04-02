@@ -9,12 +9,12 @@ from pathlib import Path
 from NetworkModel import NetworkModel
 import itertools
 
-class NetworkEnv(gym.Env):
+class FlowBasedNetworkEnv(gym.Env):
     """Custom Environment for SDN DRL Routing using K-Shortest Paths and SDM"""
     metadata = {'render_modes': ['console']}
 
     def __init__(self):
-        super(NetworkEnv, self).__init__()
+        super(FlowBasedNetworkEnv, self).__init__()
 
         base_dir = Path(__file__).resolve().parent
         topology_path = base_dir / "topologies" / "mesh5x5.json"
@@ -29,7 +29,7 @@ class NetworkEnv(gym.Env):
         self.max_hops = 25 
         
         self.no_of_flows = 150
-        self.k_paths = 3  # The AI can choose between the 3 shortest paths for any flow
+        self.k_paths = 7  # The AI can choose between the 3 shortest paths for any flow
 
         # --- PRE-COMPUTE K-SHORTEST PATHS ---
         # We do this once during startup so the training loop runs lightning fast
@@ -45,7 +45,7 @@ class NetworkEnv(gym.Env):
         # --- THE NEW ACTION SPACE ---
         # 625 discrete path choices (mapped from continuous [0.0, 0.999])
         # Index i = (src_idx * 25) + dst_idx
-        self.action_space = spaces.Box(low=0.0, high=0.999, shape=(625,), dtype=np.float32)
+        self.action_space = spaces.MultiDiscrete([self.k_paths] * 625)
         
         # --- THE NEW OBSERVATION SPACE ---
         # State: ATVM (625) + SDM/Traffic Demand Matrix (625) = 1250 total inputs
@@ -103,14 +103,9 @@ class NetworkEnv(gym.Env):
             action_idx = (src_idx * 25) + dst_idx
             
             # Grab the AI's continuous choice [0.0, 0.999]
-            ai_choice = action[action_idx]
+            path_idx = action[action_idx]
                         
-            # Map to one of the k-paths
-            available_paths = self.all_k_paths[(src_ip, dst_ip)]
-            num_available = len(available_paths)
-            
-            path_idx = int(ai_choice * num_available)
-            self.flows_paths[(src_ip, dst_ip)] = available_paths[path_idx]
+            self.flows_paths[(src_ip, dst_ip)] = self.all_k_paths[(src_ip, dst_ip)][path_idx]
 
         # Calculate physics for the chosen paths
         avg_delay, total_packet_loss, switch_AVTM_matrix = self.model.calculate_measurements(self.flows_traffic, self.flows_paths)
@@ -126,6 +121,6 @@ class NetworkEnv(gym.Env):
         self.current_step += 1
         terminated = False 
         truncated = self.current_step >= self.max_steps 
-        info = {'avg_delay': avg_delay, 'packet_loss': total_packet_loss}
+        info = {'avg_delay': avg_delay, 'packet_loss': total_packet_loss, 'flows_paths': self.flows_paths}
         
         return next_state, reward, terminated, truncated, info
