@@ -39,17 +39,16 @@ class NetworkModel:
         self.full_AVTM_matrix = np.zeros((self.no_of_nodes, self.no_of_nodes, no_of_flows), dtype=np.float32)
 
         for flow_name, traffic in self.flows_traffic.items():
-            path = self.flows_paths[flow_name]
             flow_idx = self.flow_to_index[flow_name]
 
-            for u, v in zip(path, path[1:]):
+            for u, v in self.ziped_flow_paths[flow_name]:
                 u_idx = self.node_to_index[u]
                 v_idx = self.node_to_index[v]
 
                 self.full_AVTM_matrix[u_idx, v_idx, flow_idx] = traffic
         
         for i in range(18):
-            temp_full_AVTM_matrix = self.full_AVTM_matrix
+            temp_full_AVTM_matrix = self.full_AVTM_matrix.copy()
 
             switch_leaving_prob = {}
 
@@ -101,7 +100,7 @@ class NetworkModel:
                     temp_full_AVTM_matrix[next_u_idx, next_v_idx, flow_idx] = outgoing_traffic
                 
             
-            self.full_AVTM_matrix = temp_full_AVTM_matrix
+            self.full_AVTM_matrix = temp_full_AVTM_matrix.copy()
 
         delay_at_switch = {}
 
@@ -186,10 +185,39 @@ if __name__ == '__main__':
     G = json2networkx(topology_path)
     model = NetworkModel(G)
 
+    # weights = [1.       , 5.       , 1.       , 1.       , 1.       , 1.       ,
+    #    1.       , 1.       , 1.       , 1.       , 5.       , 5.       ,
+    #    1.       , 1.       , 5.       , 1.       , 5.       , 1.       ,
+    #    1.       , 5.       , 5.       , 1.       , 1.       , 5.       ,
+    #    1.2316306, 5.       , 5.       , 1.2761637, 1.       , 1.       ,
+    #    5.       , 5.       , 1.       , 1.       , 1.       , 5.       ,
+    #    1.       , 5.       , 5.       , 5.       , 1.       , 5.       ,
+    #    5.       , 5.       , 5.       , 5.       , 5.       , 1.       ,
+    #    1.       , 2.7109962, 1.       , 5.       , 1.       , 1.0602391,
+    #    1.2330025, 5.       , 1.       , 1.       , 1.       , 5.       ,
+    #    5.       , 5.       , 1.       , 5.       , 5.       , 5.       ,
+    #    1.       , 5.       , 5.       , 5.       , 5.       , 5.       ,
+    #    5.       , 5.       , 1.       , 1.       , 1.       , 1.       ,
+    #    5.       , 1.       , 5.       , 1.       , 5.       , 5.       ,
+    #    1.       , 5.       , 1.       , 5.       , 1.       , 5.       ,
+    #    5.       , 5.       , 5.       , 5.       , 1.       , 1.       ,
+    #    5.       , 1.       , 5.       , 1.       , 5.       , 5.       ,
+    #    1.       , 1.       , 1.       , 1.       , 5.       , 1.       ,
+    #    5.       , 1.       , 1.       , 1.       , 5.       , 1.       ,
+    #    1.       , 5.       , 1.       , 3.6593628, 1.       , 1.       ,
+    #    5.       , 1.       , 1.       , 1.       , 1.       , 1.       ,
+    #    1.       , 5.       , 5.       , 5.]
+    
+    # for i, (u, v, attr) in enumerate(G.edges(data = True)):
+    #     attr['weight'] = weights[i]
+
     alpha = 0.9
     mu_max = 3000
     K_max = 10000
     max_hops = 25
+    seed = 412158
+
+    random.seed(seed)
     
     flows_traffic = {}
     no_of_flows = 150
