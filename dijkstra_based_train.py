@@ -2,9 +2,10 @@ import numpy as np
 from stable_baselines3 import DDPG
 from stable_baselines3.common.noise import OrnsteinUhlenbeckActionNoise
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize # Added VecNormalize
-
-from flow_based_network_env import NetworkEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv
+import os
+from stable_baselines3.common.callbacks import CheckpointCallback
+from network_env import NetworkEnv
 
 def main():
     print("Initializing Multi-Process Network Environment...")
@@ -24,14 +25,14 @@ def main():
     n_actions = env.action_space.shape[-1]
     action_noise = OrnsteinUhlenbeckActionNoise(
         mean=np.zeros(n_actions), 
-        sigma=0.2 * np.ones(n_actions) 
+        sigma=0.1 * np.ones(n_actions) 
     )
 
     # The article specifies two fully-connected hidden layers with 400 and 300 units 
     policy_kwargs = dict(
             net_arch=dict(
-                pi=[2048, 1024], # The Actor (chooses the 625 paths)
-                qf=[2048, 1024]  # The Critic (judges the choices)
+                pi=[400, 300], # The Actor (chooses the 625 paths)
+                qf=[400, 300]  # The Critic (judges the choices)
             )
         )
 
@@ -41,11 +42,11 @@ def main():
         env, 
         action_noise=action_noise,
         policy_kwargs=policy_kwargs,
-        learning_rate=0.00001,       # Dropped to a safe, stable value (10x faster than paper, but safe)
+        learning_rate=0.0001,       # Dropped to a safe, stable value (10x faster than paper, but safe)
         buffer_size=50000,   
         tau=0.00001,       
         batch_size=100,             
-        gamma=0.99,                 
+        gamma=0.0,                 
         learning_starts=1000,       # Let it wander randomly for 1000 steps before doing any math
         verbose=1,                  
         device="cuda",               
@@ -53,19 +54,23 @@ def main():
         gradient_steps=-1     
     )
 
-    total_timesteps = 300000 
+    total_timesteps = 1500000 
     print(f"Starting training for {total_timesteps} iterations. This may take a while depending on your CPU/GPU...")
+
+    checkpoint_dir = './models/article_dijkstra/'
+    os.makedirs(checkpoint_dir, exist_ok=True)
+
+    checkpoint_callback = CheckpointCallback(
+        save_freq=12500, # Saves every 50k total steps across 4 envs
+        save_path=checkpoint_dir,
+        name_prefix='ddpg_sdn_routing'
+    )
     
-    model.learn(total_timesteps=total_timesteps, log_interval=100)
+    model.learn(total_timesteps=total_timesteps, log_interval=1000, callback=checkpoint_callback)
 
     # Save the fully trained model
     print("Training complete! Saving model to 'ddpg_sdn_routing.zip'...")
-    model.save("ddpg_sdn_routing_flow_based_universal_model")
-
-    # CRITICAL: Save the VecNormalize statistics
-    # If you do not save this, the model will be blind during evaluation!
-    # print("Saving VecNormalize statistics to 'vec_normalize.pkl'...")
-    # env.save("vec_normalize.pkl")
+    model.save("ddpg_sdn_routing_article")
 
     # Close the environment
     env.close()
