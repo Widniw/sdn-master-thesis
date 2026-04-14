@@ -58,7 +58,8 @@ class FlowBasedNetworkEnv(gym.Env):
     def reset(self, seed=None, options=None):
         self.current_step = 0
         super().reset(seed=seed)
-        
+        random.seed(seed)
+
         self.flows_traffic = {}
         self.flows_paths = {}
         self.total_incoming_network = 0
