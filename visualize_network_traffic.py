@@ -15,7 +15,7 @@ def main():
     seed = 412158
     
     # Load your best trained DDPG model
-    best_model_path = "./models/article_dijkstra/ddpg_sdn_routing_article_universal_model_max_steps_1" 
+    best_model_path = "./models/article_dijkstra/ddpg_sdn_routing_200000_steps" 
     article_model = DDPG.load(best_model_path, env = ddpg_env)
 
     # 1. Reset the environment to generate a new random traffic matrix
@@ -33,10 +33,11 @@ def main():
 
     switch_ro = {}
     for switch in range(25):
-        switch_ro[switch] = switch_AVTM_matrix[:, switch].sum()
+        switch_ro[switch] = switch_AVTM_matrix[:, switch].sum()    
 
     print(f"{switch_AVTM_matrix = }")
     print(f"{switch_ro = }")
+    print(f"average_ro = {np.average(list(switch_ro.values()))}")
     print(f"avg_delay = {info['avg_delay']}")
     print(f"packet loss = {info['packet_loss']}")
     print(f"{reward = }")
