@@ -8,7 +8,7 @@ import os
 
 def main():
     # 1. Define the number of parallel processes (CPU cores) you want to use
-    n_envs = 4
+    n_envs = 8
 
     # 2. Wrap your custom environment in the SubprocVecEnv
     # This automatically spins up 4 independent background processes
@@ -45,7 +45,7 @@ def main():
     checkpoint_callback = CheckpointCallback(
         save_freq=12500, # Saves every 50k total steps across 4 envs
         save_path=checkpoint_dir,
-        name_prefix='ppo_discrete_7_paths'
+        name_prefix='ppo_correct_discrete_7_paths'
     )
     
     model.learn(total_timesteps=total_timesteps, log_interval=1, callback=checkpoint_callback)
