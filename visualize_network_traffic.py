@@ -21,10 +21,10 @@ def main():
     # 1. Reset the environment to generate a new random traffic matrix
     obs, _ = ddpg_env.reset(seed=seed) # Set seed early to be safe
 
-    action, _states = article_model.predict(obs, deterministic=True)
+    # action, _states = article_model.predict(obs, deterministic=True)
 
     # --- TEST 1: THE NAIVE METHOD ---
-    # action = np.ones(ddpg_env.action_space.shape)
+    action = np.ones(ddpg_env.action_space.shape)
     
     # Capture the REWARD (the second variable returned by step)
     flatten_AVTM_matrix, reward, _, _, info = ddpg_env.step(action)

@@ -17,26 +17,23 @@ def main():
 # 1. Give PPO the exact same size "brain" as DDPG (The paper used [400, 300])
     policy_kwargs = dict(
         net_arch=dict(
-            pi=[2048, 1024], # The Actor MUST be big enough for 1250 inputs
-            vf=[2048, 1024]  # The Critic
+            pi=[256, 256], # The Actor MUST be big enough for 1250 inputs
+            vf=[256, 256]  # The Critic
         )
     )
 
     print("Building the PPO Agent...")
     model = PPO(
-        "MlpPolicy", 
-        env, 
-        learning_rate=0.00001,    
-        n_steps=512,            
-        batch_size=256,             
-        ent_coef=0.0001,       
-        gamma = 0.0,   
+        "MlpPolicy", env, 
+        learning_rate=0.0003, # Back to normal speed!
+        n_steps=2048,         # Standard step size
+        batch_size=64,        # Standard batch size
+        gamma=1,           # TRITICAL CHANGE: Since there are 150 steps now, gamma MUST be 0.99!
         policy_kwargs=policy_kwargs,
-        verbose=1,                  
-        device="cpu"               
+        verbose=1, device="cpu"
     )
 
-    total_timesteps = 1500000 
+    total_timesteps = 15000000 
     print(f"Starting training for {total_timesteps} iterations...")
 
     checkpoint_dir = './models/my_approach_flow_based/'
@@ -45,7 +42,7 @@ def main():
     checkpoint_callback = CheckpointCallback(
         save_freq=12500, # Saves every 50k total steps across 4 envs
         save_path=checkpoint_dir,
-        name_prefix='ppo_correct_discrete_7_paths'
+        name_prefix='ppo_correct_discrete_3_paths'
     )
     
     model.learn(total_timesteps=total_timesteps, log_interval=1, callback=checkpoint_callback)

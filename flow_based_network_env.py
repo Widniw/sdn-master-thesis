@@ -29,7 +29,7 @@ class FlowBasedNetworkEnv(gym.Env):
         self.max_hops = 25 
         
         self.no_of_flows = 150
-        self.k_paths = 7  # The AI can choose between the 3 shortest paths for any flow
+        self.k_paths = 3  # The AI can choose between the 3 shortest paths for any flow
 
         # --- PRE-COMPUTE K-SHORTEST PATHS ---
         # We do this once during startup so the training loop runs lightning fast
@@ -42,86 +42,88 @@ class FlowBasedNetworkEnv(gym.Env):
                     self.all_k_paths[(src, dst)] = list(itertools.islice(nx.shortest_simple_paths(self.G, src, dst), self.k_paths))
         print("Path pre-computation complete!")
 
-        # --- THE NEW ACTION SPACE ---
-        # 625 discrete path choices (mapped from continuous [0.0, 0.999])
-        # Index i = (src_idx * 25) + dst_idx
-        self.action_space = spaces.MultiDiscrete([self.k_paths] * 625)
+        self.action_space = spaces.Discrete(self.k_paths)
         
-        # --- THE NEW OBSERVATION SPACE ---
-        # State: ATVM (625) + SDM/Traffic Demand Matrix (625) = 1250 total inputs
-        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(1250,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(1253,), dtype=np.float32)
 
-        self.max_steps = 1 # 10 steps per episode to let the gradients stabilize
-        self.current_step = 0
+        self.current_flow_idx = 0
+
         self.max_possible_delay = self.max_hops * (self.K_max / self.mu_max)
+        self.active_flow_keys = []
 
     def reset(self, seed=None, options=None):
-        self.current_step = 0
         super().reset(seed=seed)
         random.seed(seed)
 
+        self.current_flow_idx = 0
         self.flows_traffic = {}
-        self.flows_paths = {}
+        self.flows_paths = {} 
+        self.active_flow_keys = []
         self.total_incoming_network = 0
-        
-        # Initialize an empty Source Destination Matrix (SDM)
         self.SDM = np.zeros((25, 25), dtype=np.float32)
         
-        # Generate random traffic
-        for _ in range(self.no_of_flows):
+        # 1. Generate all 150 flows up front
+        for i in range(self.no_of_flows):
             random_hosts = random.sample(range(0, 25), 2)
             traffic_rate = random.uniform(10, 300)
             self.total_incoming_network += traffic_rate
             
-            src_idx = random_hosts[0]
-            dst_idx = random_hosts[1]
+            src_idx, dst_idx = random_hosts[0], random_hosts[1]
+            flow_key = (f"10.0.1.{src_idx}", f"10.0.1.{dst_idx}", i)  # i makes it unique
             
-            flow_key = (f"10.0.1.{src_idx}", f"10.0.1.{dst_idx}")
             self.flows_traffic[flow_key] = traffic_rate
-            
-            # Place traffic in the matrix and normalize it (max generated is 300)
+            self.active_flow_keys.append(flow_key)
             self.SDM[src_idx, dst_idx] = min(1.0, traffic_rate / 300.0)
 
-            self.flows_paths[flow_key] = self.all_k_paths[flow_key][0]
-
-        # Calculate initial measurements
-        _, _, switch_AVTM_matrix = self.model.calculate_measurements(self.flows_traffic, self.flows_paths)
-            
-        state = np.concatenate((switch_AVTM_matrix.flatten(), self.SDM.flatten()))
+        # 2. Get the blank starting network state
+        _, _, switch_AVTM_matrix = self.model.calculate_measurements({}, {})
         
+        # 3. Build the state for Flow #1
+        state = self._build_state(switch_AVTM_matrix)
         return state, {}
 
     def step(self, action):
-        self.flows_paths = {}
+        current_flow = self.active_flow_keys[self.current_flow_idx]
+        src, dst, _ = current_flow
+        self.flows_paths[current_flow] = self.all_k_paths[(src, dst)][action]
         
-        # Map the 625 actions ONLY to the active flows
-        for (src_ip, dst_ip), _ in self.flows_traffic.items():
-            # Extract raw integer indices (0 to 24)
-            src_idx = int(src_ip.split('.')[-1]) 
-            dst_idx = int(dst_ip.split('.')[-1])
-            
-            # Find the EXACT index in the 625-length action array
-            action_idx = (src_idx * 25) + dst_idx
-            
-            # Grab the AI's continuous choice [0.0, 0.999]
-            path_idx = action[action_idx]
-                        
-            self.flows_paths[(src_ip, dst_ip)] = self.all_k_paths[(src_ip, dst_ip)][path_idx]
+        self.current_flow_idx += 1
+        
+        terminated = self.current_flow_idx >= self.no_of_flows
+        truncated = False
+        info = {}
 
-        # Calculate physics for the chosen paths
-        avg_delay, total_packet_loss, switch_AVTM_matrix = self.model.calculate_measurements(self.flows_traffic, self.flows_paths)
-        
-        # Calculate Reward
-        r_d = 1.0 - min(avg_delay / self.max_possible_delay, 1.0)
-        r_p = 1.0 - min(total_packet_loss / self.total_incoming_network, 1.0) if self.total_incoming_network > 0 else 1.0
-        reward = self.alpha * r_d + (1 - self.alpha) * r_p
-        
-        # Build Next State
-        next_state = np.concatenate((switch_AVTM_matrix.flatten(), self.SDM.flatten()))
-        
-        self.current_step += 1
-        terminated = False 
-        truncated = self.current_step >= self.max_steps 
-        info = {'avg_delay': avg_delay, 'packet_loss': total_packet_loss, 'flows_paths': self.flows_paths}
-        
+        if terminated:
+            avg_delay, total_packet_loss, switch_AVTM_matrix = self.model.calculate_measurements(self.flows_traffic, self.flows_paths)
+            
+            r_d = 1.0 - min(avg_delay / self.max_possible_delay, 1.0)
+            r_p = 1.0 - min(total_packet_loss / self.total_incoming_network, 1.0) if self.total_incoming_network > 0 else 1.0
+            reward = self.alpha * r_d + (1 - self.alpha) * r_p
+            
+            info = {'avg_delay': avg_delay, 'packet_loss': total_packet_loss}
+            
+            next_state = np.zeros(1253, dtype=np.float32)
+            
+        else:
+            # THE GAME CONTINUES: Give a reward of 0 and get the next state
+            reward = 0.0
+            
+            # Fast-update the ATVM based on current paths to show the AI the growing congestion
+            _, _, switch_AVTM_matrix = self.model.calculate_measurements(
+                {k: self.flows_traffic[k] for k in self.active_flow_keys[:self.current_flow_idx]}, 
+                self.flows_paths
+            )
+            next_state = self._build_state(switch_AVTM_matrix)
+
         return next_state, reward, terminated, truncated, info
+
+    def _build_state(self, avtm):
+        """Helper function to create the 1253-length array"""
+        current_flow = self.active_flow_keys[self.current_flow_idx]
+        src, dst, _ = current_flow
+        src_idx = int(current_flow[0].split('.')[-1])
+        dst_idx = int(current_flow[1].split('.')[-1])
+        traffic_rate = self.flows_traffic[current_flow] / 300.0 # Normalize
+
+        flow_info = np.array([src_idx / 24.0, dst_idx / 24.0, traffic_rate], dtype=np.float32)
+        return np.concatenate((avtm.flatten(), self.SDM.flatten(), flow_info))

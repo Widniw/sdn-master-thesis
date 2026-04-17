@@ -137,10 +137,10 @@ class NetworkModel:
         delays = np.zeros(no_of_flows)
         total_incoming_network = 0
 
-        for i, ((src, dst), traffic) in enumerate(self.flows_traffic.items()):
+        for i, ((src, dst, _), traffic) in enumerate(self.flows_traffic.items()):
             total_incoming_network += traffic
 
-            path = self.flows_paths[(src, dst)]
+            path = self.flows_paths[(src, dst, _)]
 
             total_delay = 0
 
@@ -149,7 +149,7 @@ class NetworkModel:
 
             delays[i] = total_delay
 
-        avg_delay = np.mean(delays)
+        avg_delay = np.mean(delays) if len(delays) > 0 else 0.0
 
         total_packet_loss = 0
 
@@ -177,6 +177,23 @@ class NetworkModel:
                 switch_AVTM_matrix[int(src_switch)][int(dst_switch)] = normalized_traffic
 
         return avg_delay, total_packet_loss, switch_AVTM_matrix
+
+    
+    def calculate_lightweight_avtm(self, flows_traffic, flows_paths):
+        switch_AVTM_matrix = np.zeros((self.no_of_switches, self.no_of_switches), dtype=np.float32)
+        
+        for flow_key, traffic in flows_traffic.items():
+            path = flows_paths[flow_key]
+            for u, v in zip(path, path[1:]):
+                # Skip edges that involve host nodes
+                if u not in self.switches or v not in self.switches:
+                    continue
+                u_idx = self.node_to_index[u]
+                v_idx = self.node_to_index[v]
+                switch_AVTM_matrix[u_idx][v_idx] += traffic / self.mu_max
+                switch_AVTM_matrix[u_idx][v_idx] = min(1.0, switch_AVTM_matrix[u_idx][v_idx])
+        
+        return switch_AVTM_matrix
                 
 if __name__ == '__main__':
     base_dir = Path(__file__).resolve().parent
