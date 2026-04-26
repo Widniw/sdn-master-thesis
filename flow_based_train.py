@@ -8,7 +8,7 @@ import os
 
 def main():
     # 1. Define the number of parallel processes (CPU cores) you want to use
-    n_envs = 8
+    n_envs = 4
 
     # 2. Wrap your custom environment in the SubprocVecEnv
     # This automatically spins up 4 independent background processes
@@ -17,8 +17,8 @@ def main():
 # 1. Give PPO the exact same size "brain" as DDPG (The paper used [400, 300])
     policy_kwargs = dict(
         net_arch=dict(
-            pi=[2048, 1024], # The Actor MUST be big enough for 1250 inputs
-            vf=[2048, 1024]  # The Critic
+            pi=[400, 300], # The Actor MUST be big enough for 1250 inputs
+            vf=[400, 300]  # The Critic
         )
     )
 
@@ -30,7 +30,7 @@ def main():
         n_steps=512,            
         batch_size=256,             
         ent_coef=0.0001,       
-        gamma = 0.0,   
+        gamma = 0.99,   
         policy_kwargs=policy_kwargs,
         verbose=1,                  
         device="cpu"               
@@ -45,7 +45,7 @@ def main():
     checkpoint_callback = CheckpointCallback(
         save_freq=12500, # Saves every 50k total steps across 4 envs
         save_path=checkpoint_dir,
-        name_prefix='ppo_correct_discrete_7_paths'
+        name_prefix='ppo_correct_discrete_3_paths'
     )
     
     model.learn(total_timesteps=total_timesteps, log_interval=1, callback=checkpoint_callback)
