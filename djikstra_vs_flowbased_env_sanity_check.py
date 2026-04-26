@@ -7,7 +7,7 @@ def sanity_check():
     dijkstra_env = NetworkEnv()
     flow_based_env = FlowBasedNetworkEnv()
     
-    num_episodes = 1
+    num_episodes = 100
 
     dijkstra_total_delays = []
     dijkstra_total_packet_losses = []
@@ -20,7 +20,7 @@ def sanity_check():
     print(f"\n Running sanity check over {num_episodes} different traffic scenarios...")
     print("-" * 50)
 
-    for episode in range(num_episodes):
+    for episode in range(1000, 1000 + num_episodes):
         dijkstra_env.reset(seed=episode)
         flow_based_env.reset(seed=episode)
 
@@ -66,7 +66,7 @@ def sanity_check():
     print(f"Dijkstra Average Reward across {num_episodes} scenarios: \t\t {np.mean(dijkstra_total_rewards):.4f} s")
     print(f"Flow Based Average Delay across {num_episodes} scenarios: \t\t {np.mean(flow_based_total_delays):.4f} s")
     print(f"Flow Based Average Packet Loss across {num_episodes} scenarios: \t {np.mean(flow_based_total_packet_losses):.2f} pkts/s")
-    print(f"Flow Based Average Reward across {num_episodes} scenarios: \t\t {np.mean(flow_based_total_rewards):.4f} pkts/s")
+    print(f"Flow Based Average Reward across {num_episodes} scenarios: \t {np.mean(flow_based_total_rewards):.4f} pkts/s")
 
 
 
