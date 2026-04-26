@@ -68,12 +68,9 @@ class FlowBasedNetworkEnv(gym.Env):
             src, dst = random.sample(range(0, 25), 2)
             flow_key = (f"10.0.1.{src}", f"10.0.1.{dst}")
             
-            if flow_key in self.flows_traffic.keys():
-                continue
-
-            self.idx_to_flow[self.flow_no] = flow_key
-
-            self.flow_no += 1
+            if flow_key not in self.idx_to_flow.values():
+                self.idx_to_flow[self.flow_no] = flow_key
+                self.flow_no += 1
 
             traffic_rate = random.uniform(10, 300)
             self.total_incoming_network += traffic_rate
