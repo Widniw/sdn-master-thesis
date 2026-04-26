@@ -23,6 +23,13 @@ class NetworkModel:
         self.flows_traffic = flows_traffic
         self.flows_paths = flows_paths
 
+        if len(self.flows_paths) == 0:
+            switch_AVTM_matrix = np.zeros((self.no_of_switches, self.no_of_switches), dtype=np.float32)
+            avg_delay = 0
+            total_packet_loss = 0
+            
+            return avg_delay, total_packet_loss, switch_AVTM_matrix
+
         self.ziped_flow_paths = {}
 
         for flow, path in self.flows_paths.items():
