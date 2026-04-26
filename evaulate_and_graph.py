@@ -14,7 +14,7 @@ def main():
     best_model_path = "./models/article_dijkstra/ddpg_sdn_routing_article_universal_model_max_steps_1" 
     article_model = DDPG.load(best_model_path, env = ddpg_env)
 
-    best_model_path = "./models/my_approach_flow_based/ppo_discrete_7_paths_2100000_steps"
+    best_model_path = "./models/my_approach_flow_based/ppo_correct_discrete_3_paths_1500000_steps"
     flowbased_model = PPO.load(best_model_path, env = flowbased_env)
 
     num_test_episodes = 100
@@ -25,8 +25,7 @@ def main():
     print(f"Starting evaluation over {num_test_episodes} traffic scenarios...\n")
 
     for episode in range(num_test_episodes):
-        # 1. Reset the environment to generate a new random traffic matrix
-        obs, _ = ddpg_env.reset(seed=episode) # Set seed early to be safe
+        obs, _ = ddpg_env.reset(seed=episode) 
         flowbased_obs, _ = flowbased_env.reset(seed=episode)
 
         # --- TEST 1: THE NAIVE METHOD ---
@@ -54,11 +53,11 @@ def main():
         # weights_list = list(weights_dict.values())
         # print(f"DRL episode {episode}:{weights_list = }")
 
-        flowbased_env.reset(seed=episode)
+        truncated = False
+        while not truncated:
+            flowbased_action, _ = flowbased_model.predict(flowbased_obs, deterministic=True)
+            flowbased_obs, flowbased_reward, _, truncated, _ = flowbased_env.step(flowbased_action)
 
-        flowbased_action, _ = flowbased_model.predict(flowbased_obs, deterministic=True)
-
-        _, flowbased_reward, _, _, _ = flowbased_env.step(flowbased_action)
         flowbased_rewards.append(flowbased_reward)
 
         # Print progress every 10 episodes
