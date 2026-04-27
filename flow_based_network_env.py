@@ -109,6 +109,10 @@ class FlowBasedNetworkEnv(gym.Env):
         # Calculate physics for the chosen paths
         avg_delay, total_packet_loss, switch_AVTM_matrix = self.model.calculate_measurements(temp_flows_traffic, self.flows_paths)
 
+        self.flow_no += 1
+
+        (src_ip, dst_ip) = self.idx_to_flow[self.flow_no]
+
         src_idx = int(src_ip.split('.')[-1]) 
         dst_idx = int(dst_ip.split('.')[-1])
 
@@ -121,8 +125,6 @@ class FlowBasedNetworkEnv(gym.Env):
         state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))
         info = {'avg_delay': avg_delay, 'packet_loss': total_packet_loss, 'flows_paths': self.flows_paths}
         terminated = False
-
-        self.flow_no += 1
 
         if self.flow_no >= len(self.flows_traffic.keys()):
         
