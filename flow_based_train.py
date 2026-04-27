@@ -8,7 +8,7 @@ import os
 
 def main():
     # 1. Define the number of parallel processes (CPU cores) you want to use
-    n_envs = 4
+    n_envs = 16
 
     # 2. Wrap your custom environment in the SubprocVecEnv
     # This automatically spins up 4 independent background processes
@@ -26,11 +26,11 @@ def main():
     model = PPO(
         "MlpPolicy", 
         env, 
-        learning_rate=0.00001,    
+        learning_rate=0.0003,    
         n_steps=512,            
         batch_size=256,             
         ent_coef=0.0001,       
-        gamma = 0.99,   
+        gamma = 0.999,   
         policy_kwargs=policy_kwargs,
         verbose=1,                  
         device="cpu"               
