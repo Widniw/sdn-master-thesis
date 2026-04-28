@@ -11,10 +11,10 @@ def main():
     flowbased_env = FlowBasedNetworkEnv()
     
     # Load your best trained DDPG model
-    best_model_path = "./models/article_dijkstra/ddpg_sdn_routing_article_universal_model_max_steps_1" 
+    best_model_path = "./models/article_dijkstra/ddpg_sdn_routing_200000_steps" 
     article_model = DDPG.load(best_model_path, env = ddpg_env)
 
-    best_model_path = "./models/my_approach_flow_based/ppo_correct_discrete_3_paths_1500000_steps"
+    best_model_path = "./models/my_approach_flow_based/ppo_correct_discrete_3_paths_1200000_steps"
     flowbased_model = PPO.load(best_model_path, env = flowbased_env)
 
     num_test_episodes = 100

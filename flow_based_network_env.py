@@ -109,7 +109,29 @@ class FlowBasedNetworkEnv(gym.Env):
         # Calculate physics for the chosen paths
         avg_delay, total_packet_loss, switch_AVTM_matrix = self.model.calculate_measurements(temp_flows_traffic, self.flows_paths)
 
+        info = {'avg_delay': avg_delay, 'packet_loss': total_packet_loss, 'flows_paths': self.flows_paths}
+
         self.flow_no += 1
+
+        terminated = False
+
+        if self.flow_no >= len(self.flows_traffic.keys()):
+        
+            # Calculate Reward
+            r_d = 1.0 - min(avg_delay / self.max_possible_delay, 1.0)
+            r_p = 1.0 - min(total_packet_loss / self.total_incoming_network, 1.0) if self.total_incoming_network > 0 else 1.0
+            reward = self.alpha * r_d + (1 - self.alpha) * r_p
+
+            src_state = np.zeros(25)
+            dst_state = np.zeros(25)
+
+            truncated = True
+            state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))
+
+            return state, reward, terminated, truncated, info
+        
+        reward = 0
+        truncated = False
 
         (src_ip, dst_ip) = self.idx_to_flow[self.flow_no]
 
@@ -122,22 +144,6 @@ class FlowBasedNetworkEnv(gym.Env):
         dst_state = np.zeros(25)
         dst_state[dst_idx] = 1
 
-        state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))
-        info = {'avg_delay': avg_delay, 'packet_loss': total_packet_loss, 'flows_paths': self.flows_paths}
-        terminated = False
+        state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))        
 
-        if self.flow_no >= len(self.flows_traffic.keys()):
-        
-            # Calculate Reward
-            r_d = 1.0 - min(avg_delay / self.max_possible_delay, 1.0)
-            r_p = 1.0 - min(total_packet_loss / self.total_incoming_network, 1.0) if self.total_incoming_network > 0 else 1.0
-            reward = self.alpha * r_d + (1 - self.alpha) * r_p
-
-            truncated = True
-        else:
-            reward = 0
-            truncated = False
-
-
-        
         return state, reward, terminated, truncated, info
