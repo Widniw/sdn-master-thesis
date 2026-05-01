@@ -5,3 +5,4 @@ training_logs/
 .vscode
 *.png
 *.pdf
+test.py
