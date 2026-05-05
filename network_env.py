@@ -27,7 +27,7 @@ class NetworkEnv(gym.Env):
         self.max_hops = 25 # Absolute worst-case path length for scaling delay
         
         # Actions: Link weights bounded between 1 and 5 [cite: 426, 444]
-        self.action_space = spaces.Box(low=1.0, high=5.0, shape=(self.model.no_of_edges,), dtype=np.float32)
+        self.action_space = spaces.Box(low=1.0, high=10.0, shape=(self.model.no_of_edges,), dtype=np.float32)
         
         # State: ATVM (Aggregated Traffic Volume Matrix) normalized [0, 1] 
         # Shape is (25, 25) flattened to 1D for the neural network
