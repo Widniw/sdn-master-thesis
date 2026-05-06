@@ -6,3 +6,4 @@ training_logs/
 *.png
 *.pdf
 test.py
+images/
