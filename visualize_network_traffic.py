@@ -12,7 +12,7 @@ from matplotlib.colors import LinearSegmentedColormap
 def main():
     print("Loading environment and model...")
     ddpg_env = NetworkEnv()
-    seed = 412158
+    seed = 1001
     
     # Load your best trained DDPG model
     best_model_path = "./models/article_dijkstra/ddpg_sdn_routing_200000_steps" 
@@ -23,8 +23,20 @@ def main():
 
     action, _states = article_model.predict(obs, deterministic=True)
 
+    max_weight_edges = []
+    for i, (u, v) in enumerate(ddpg_env.model.edges):
+        print(f"{(u,v)} = {action[i]}")
+
+        if action[i] == 5:
+            max_weight_edges.append((u, v))
+    
+    print(f"{max_weight_edges = }")
+
     # --- TEST 1: THE NAIVE METHOD ---
     # action = np.ones(ddpg_env.action_space.shape)
+
+    for key, path in ddpg_env.flows_paths.items():
+        print(f"{key} = {path}")
     
     # Capture the REWARD (the second variable returned by step)
     flatten_AVTM_matrix, reward, _, _, info = ddpg_env.step(action)
@@ -35,7 +47,7 @@ def main():
     for switch in range(25):
         switch_ro[switch] = switch_AVTM_matrix[:, switch].sum()    
 
-    print(f"{switch_AVTM_matrix = }")
+    # print(f"{switch_AVTM_matrix = }")
     print(f"{switch_ro = }")
     print(f"average_ro = {np.average(list(switch_ro.values()))}")
     print(f"avg_delay = {info['avg_delay']}")
