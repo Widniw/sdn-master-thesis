@@ -127,7 +127,7 @@ class NetworkModel:
                 ro = total_incoming / service_rate        
 
                 if ro == 1:
-                    L_system = queue_capacity / total_outgoing
+                    L_system = queue_capacity / 2
                 elif ro < 1.0:
                     term1 = ro / (1 - ro)
                     term2 = ((queue_capacity + 1) * (ro ** (queue_capacity + 1))) / (1 - (ro ** (queue_capacity + 1)))    
