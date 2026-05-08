@@ -50,7 +50,7 @@ class NetworkEnv(gym.Env):
         self.total_incoming_network = 0
         for _ in range(no_of_flows):
             random_hosts = random.sample(range(0, 25), 2)
-            traffic_rate = random.uniform(10, 200)
+            traffic_rate = random.uniform(10, 300)
             self.total_incoming_network += traffic_rate
             self.flows_traffic[(f"10.0.1.{random_hosts[0]}", f"10.0.1.{random_hosts[1]}")] = traffic_rate
         
