@@ -49,7 +49,7 @@ class FlowBasedNetworkEnv(gym.Env):
         
         # --- THE NEW OBSERVATION SPACE ---
         # State: ATVM (625) + Source Node (25) + Destination Node (25) = 675
-        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(675,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(676,), dtype=np.float32)
 
         self.max_possible_delay = self.max_hops * (self.K_max / self.mu_max)
 
@@ -93,8 +93,6 @@ class FlowBasedNetworkEnv(gym.Env):
             
         self.total_incoming_network += elephant_traffic_rate
         self.flows_traffic[elephant_flow_key] = elephant_traffic_rate
-        
-
 
         self.flow_no = 0
         
@@ -111,7 +109,10 @@ class FlowBasedNetworkEnv(gym.Env):
         dst_state = np.zeros(25)
         dst_state[dst_idx] = 1
 
-        state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))
+        next_traffic_rate = self.flows_traffic[(src_ip, dst_ip)]
+        normalized_next_traffic_rate = np.array([next_traffic_rate / self.mu_max], dtype = np.float32)
+
+        state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state, normalized_next_traffic_rate))
         
         return state, {}
 
@@ -144,8 +145,10 @@ class FlowBasedNetworkEnv(gym.Env):
             src_state = np.zeros(25)
             dst_state = np.zeros(25)
 
+            normalized_next_traffic_rate = np.array([0], dtype = np.float32)
+
             truncated = True
-            state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))
+            state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state, normalized_next_traffic_rate))
 
             return state, reward, terminated, truncated, info
         
@@ -163,6 +166,9 @@ class FlowBasedNetworkEnv(gym.Env):
         dst_state = np.zeros(25)
         dst_state[dst_idx] = 1
 
-        state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))        
+        next_traffic_rate = self.flows_traffic[(src_ip, dst_ip)]
+        normalized_next_traffic_rate = np.array([next_traffic_rate / self.mu_max], dtype = np.float32)
+
+        state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state, normalized_next_traffic_rate))        
 
         return state, reward, terminated, truncated, info
