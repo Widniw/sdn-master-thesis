@@ -14,6 +14,7 @@ class NetworkModel:
         self.edges = [edge for edge in self.G.edges()]
         self.no_of_edges = len(self.edges)
         self.mu_max = self.switches[0][1]['data'].service_rate
+        self.k_max = self.switches[0][1]['data'].queue_capacity
 
         self.node_to_index = {}
         for i, node in enumerate(self.G.nodes()):
