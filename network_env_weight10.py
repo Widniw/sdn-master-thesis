@@ -22,8 +22,8 @@ class NetworkEnv10weight(gym.Env):
                 
         # Hyperparameters from the paper
         self.alpha = 0.9  # Weight factor for delay vs packet loss 
-        self.mu_max = 3000.0  # Max service rate [cite: 441]
-        self.K_max = 10000.0  # Max queue capacity [cite: 441]
+        self.mu_max = self.model.mu_max
+        self.K_max = self.model.k_max
         self.max_hops = 25 # Absolute worst-case path length for scaling delay
         
         # Actions: Link weights bounded between 1 and 5 [cite: 426, 444]
