@@ -7,12 +7,12 @@ from gymnasium import spaces
 from pathlib import Path
 from NetworkModel import NetworkModel
 
-class NetworkEnv20weight(gym.Env):
+class NetworkEnv25weight(gym.Env):
     """Custom Environment that follows gymnasium interface for SDN DRL Routing"""
     metadata = {'render_modes': ['console']}
 
     def __init__(self):
-        super(NetworkEnv20weight, self).__init__()
+        super(NetworkEnv25weight, self).__init__()
 
         base_dir = Path(__file__).resolve().parent
         topology_path = base_dir / "topologies" / "mesh5x5.json"
