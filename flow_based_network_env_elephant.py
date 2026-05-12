@@ -80,19 +80,19 @@ class FlowBasedNetworkEnv(gym.Env):
         # Add one elephant flow
         elephant_flow_src = random.choice(range(0,5))
         elephant_flow_dst = random.choice(range(20,25))
-        elephant_flow_key = (f"10.0.1.{elephant_flow_src}",f"10.0.1.{elephant_flow_dst}")
+        self.elephant_flow = (f"10.0.1.{elephant_flow_src}",f"10.0.1.{elephant_flow_dst}")
 
         elephant_traffic_rate = 3000
 
-        if elephant_flow_key not in self.idx_to_flow.values():
-                self.idx_to_flow[self.flow_no] = elephant_flow_key
+        if self.elephant_flow not in self.idx_to_flow.values():
+                self.idx_to_flow[self.flow_no] = self.elephant_flow
                 self.flow_no += 1
         else:
-            old_traffic_rate = self.flows_traffic[elephant_flow_key]
+            old_traffic_rate = self.flows_traffic[self.elephant_flow]
             self.total_incoming_network -= old_traffic_rate
             
         self.total_incoming_network += elephant_traffic_rate
-        self.flows_traffic[elephant_flow_key] = elephant_traffic_rate
+        self.flows_traffic[self.elephant_flow] = elephant_traffic_rate
 
         self.flow_no = 0
         
