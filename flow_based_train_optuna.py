@@ -1,5 +1,5 @@
 from stable_baselines3 import PPO
-from flow_based_network_env_one_arm_bandit import FlowBasedNetworkEnv
+from flow_based_network_env_one_arm_bandit_simplified import FlowBasedNetworkEnv
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.callbacks import CheckpointCallback
@@ -58,7 +58,7 @@ def save_best_params_callback(study, trial):
     # Sprawdzamy, czy obecny trial jest tym najlepszym
     if study.best_trial.number == trial.number:
         # Zapisujemy parametry do pliku JSON
-        with open("best_params_3paths_150_flows_one_arm_bandit.json", "w") as f:
+        with open("./optuna_results/best_params_3paths_150_flows_one_arm_bandit_simplified.json", "w") as f:
             json.dump({
                 "best_value": study.best_value,
                 "best_params": study.best_params,
