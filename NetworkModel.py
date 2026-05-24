@@ -130,12 +130,12 @@ class NetworkModel:
                     L_system = queue_capacity / total_outgoing
                 elif ro < 1.0:
                     term1 = ro / (1 - ro)
-                    term2 = ((queue_capacity + 1) * (ro ** (queue_capacity + 1))) / (1 - (ro ** (queue_capacity + 1)))    
+                    term2 = ((queue_capacity + 1) * (ro ** (queue_capacity + 1))) / (1 - (ro ** (queue_capacity + 1)))
+                    L_system = term1 - term2  
                 else: # ro > 1
                     term1 = ro / (1 - ro)
                     term2 = (queue_capacity + 1) / ((ro ** -(queue_capacity + 1)) - 1)
-                
-                L_system = term1 - term2
+                    L_system = term1 - term2
 
                 exp_delay_at_switch = L_system / total_outgoing
 
