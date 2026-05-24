@@ -18,16 +18,16 @@ def objective(trial):
     env = make_vec_env(FlowBasedNetworkEnv, n_envs=n_envs, vec_env_cls=SubprocVecEnv)
 
     learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-3, log = True)
-    batch_size = trial.suggest_categorical("batch_size", [120, 240, 480, 600, 800, 1200])
-    n_steps = trial.suggest_categorical("n_steps", [150, 300, 600])
-    ent_coef = trial.suggest_float("ent_coef", 0.0001, 0.05, log = True)
-    gamma = trial.suggest_categorical("gamma", [0.9, 0.95, 0.99, 0.999, 0.99999])
+    ent_coef = trial.suggest_float("ent_coef", 1e-6, 0.05, log = True)
+    clip_range = trial.suggest_categorical("clip_range", [0.1, 0.2, 0.3])
+    n_steps = trial.suggest_categorical("n_steps", [512, 1024, 2048, 4096])
+    batch_size = trial.suggest_categorical("batch_size", [128, 256, 512, 1024])
 
-    net_arch_size = trial.suggest_categorical("net_arch", ["small", "medium", "large"])
+    net_arch_size = trial.suggest_categorical("net_arch", ["large", "xlarge", "xxlarge"])
     arch_mapping = {
-        "small": [800, 700],
-        "medium": [900, 800],
-        "large": [1024, 1024],
+        "large": [512, 512],
+        "xlarge": [1024, 1024],
+        "xxlarge": [2048, 1024],
     }
     net_arch = arch_mapping[net_arch_size] 
     policy_kwargs = dict(net_arch = dict(pi = net_arch, vf = net_arch))
@@ -40,8 +40,10 @@ def objective(trial):
         n_steps=n_steps,            
         batch_size=batch_size,             
         ent_coef=ent_coef,       
-        gamma = gamma,   
+        gamma = 0.99,   
+        gae_lambda=0.95,
         policy_kwargs=policy_kwargs,
+        clip_range=clip_range,
         verbose=1,                  
         device="cpu"               
     )
