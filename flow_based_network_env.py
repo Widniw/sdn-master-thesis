@@ -24,8 +24,8 @@ class FlowBasedNetworkEnv(gym.Env):
                 
         # Hyperparameters from the paper
         self.alpha = 0.9  
-        self.mu_max = 3000.0  
-        self.K_max = 10000.0  
+        self.mu_max = self.model.mu_max
+        self.K_max = self.model.k_max
         self.max_hops = 25 
         
         self.no_of_flows = 150

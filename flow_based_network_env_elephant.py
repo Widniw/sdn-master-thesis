@@ -1,4 +1,5 @@
 from utils import json2networkx
+from switch import Switch
 import networkx as nx
 import random
 import numpy as np
@@ -16,7 +17,7 @@ class FlowBasedNetworkEnv(gym.Env):
         super(FlowBasedNetworkEnv, self).__init__()
 
         base_dir = Path(__file__).resolve().parent
-        topology_path = base_dir / "topologies" / "mesh5x5_simplified.json"
+        topology_path = base_dir / "topologies" / "mesh5x5.json"
 
         self.G = json2networkx(topology_path)
         self.model = NetworkModel(self.G)
@@ -27,7 +28,7 @@ class FlowBasedNetworkEnv(gym.Env):
         self.K_max = self.model.k_max
         self.max_hops = 25 
         
-        self.no_of_flows = 15
+        self.no_of_flows = 150
         self.k_paths = 3  # The AI can choose between the 3 shortest paths for any flow
 
         # --- PRE-COMPUTE K-SHORTEST PATHS ---
@@ -48,11 +49,9 @@ class FlowBasedNetworkEnv(gym.Env):
         
         # --- THE NEW OBSERVATION SPACE ---
         # State: ATVM (625) + Source Node (25) + Destination Node (25) = 675
-        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(675,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(676,), dtype=np.float32)
 
         self.max_possible_delay = self.max_hops * (self.K_max / self.mu_max)
-
-        self.previous_reward = 1
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -66,21 +65,35 @@ class FlowBasedNetworkEnv(gym.Env):
         
         # Generate random traffic
         for i in range(self.no_of_flows):
-            unique = False
-            while not unique:
-                src, dst = random.sample(range(0, 25), 2)
-                flow_key = (f"10.0.1.{src}", f"10.0.1.{dst}")
-                if flow_key not in self.flows_traffic.keys():
-                    unique = True
+            src, dst = random.sample(range(0, 25), 2)
+            flow_key = (f"10.0.1.{src}", f"10.0.1.{dst}")
             
-            self.idx_to_flow[self.flow_no] = flow_key
-            self.flow_no += 1
+            if flow_key not in self.idx_to_flow.values():
+                self.idx_to_flow[self.flow_no] = flow_key
+                self.flow_no += 1
 
             traffic_rate = random.uniform(10, 300)
             self.total_incoming_network += traffic_rate
                         
             self.flows_traffic[flow_key] = traffic_rate
-        
+
+        # Add one elephant flow
+        elephant_flow_src = random.choice(range(0,5))
+        elephant_flow_dst = random.choice(range(20,25))
+        self.elephant_flow = (f"10.0.1.{elephant_flow_src}",f"10.0.1.{elephant_flow_dst}")
+
+        elephant_traffic_rate = 3000
+
+        if self.elephant_flow not in self.idx_to_flow.values():
+                self.idx_to_flow[self.flow_no] = self.elephant_flow
+                self.flow_no += 1
+        else:
+            old_traffic_rate = self.flows_traffic[self.elephant_flow]
+            self.total_incoming_network -= old_traffic_rate
+            
+        self.total_incoming_network += elephant_traffic_rate
+        self.flows_traffic[self.elephant_flow] = elephant_traffic_rate
+
         self.flow_no = 0
         
         # Calculate initial measurements
@@ -90,18 +103,16 @@ class FlowBasedNetworkEnv(gym.Env):
         src_idx = int(src_ip.split('.')[-1]) 
         dst_idx = int(dst_ip.split('.')[-1])
 
-        flow_traffic = self.flows_traffic[(src_ip, dst_ip)]
-        normalized_flow_traffic = flow_traffic / self.mu_max
-
         src_state = np.zeros(25)
-        src_state[src_idx] = normalized_flow_traffic
+        src_state[src_idx] = 1
 
         dst_state = np.zeros(25)
-        dst_state[dst_idx] = normalized_flow_traffic
+        dst_state[dst_idx] = 1
 
-        state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))
-        self.previous_reward = 1
+        next_traffic_rate = self.flows_traffic[(src_ip, dst_ip)]
+        normalized_next_traffic_rate = np.array([next_traffic_rate / self.mu_max], dtype = np.float32)
 
+        state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state, normalized_next_traffic_rate))
         
         return state, {}
 
@@ -129,28 +140,19 @@ class FlowBasedNetworkEnv(gym.Env):
             # Calculate Reward
             r_d = 1.0 - min(avg_delay / self.max_possible_delay, 1.0)
             r_p = 1.0 - min(total_packet_loss / self.total_incoming_network, 1.0) if self.total_incoming_network > 0 else 1.0
-            current_reward = self.alpha * r_d + (1 - self.alpha) * r_p
-
-            delta_reward = current_reward - self.previous_reward
-
-            self.previous_reward = current_reward
+            reward = self.alpha * r_d + (1 - self.alpha) * r_p
 
             src_state = np.zeros(25)
             dst_state = np.zeros(25)
 
+            normalized_next_traffic_rate = np.array([0], dtype = np.float32)
+
             truncated = True
-            state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))
+            state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state, normalized_next_traffic_rate))
 
-            return state, delta_reward, terminated, truncated, info
+            return state, reward, terminated, truncated, info
         
-        r_d = 1.0 - min(avg_delay / self.max_possible_delay, 1.0)
-        r_p = 1.0 - min(total_packet_loss / self.total_incoming_network, 1.0) if self.total_incoming_network > 0 else 1.0
-        current_reward = self.alpha * r_d + (1 - self.alpha) * r_p
-
-        delta_reward = current_reward - self.previous_reward
-
-        self.previous_reward = current_reward
-
+        reward = 0
         truncated = False
 
         (src_ip, dst_ip) = self.idx_to_flow[self.flow_no]
@@ -164,6 +166,9 @@ class FlowBasedNetworkEnv(gym.Env):
         dst_state = np.zeros(25)
         dst_state[dst_idx] = 1
 
-        state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))        
+        next_traffic_rate = self.flows_traffic[(src_ip, dst_ip)]
+        normalized_next_traffic_rate = np.array([next_traffic_rate / self.mu_max], dtype = np.float32)
 
-        return state, delta_reward, terminated, truncated, info
+        state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state, normalized_next_traffic_rate))        
+
+        return state, reward, terminated, truncated, info

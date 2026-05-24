@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from network_env import NetworkEnv
+from network_env_elephant import NetworkEnv
 from stable_baselines3 import DDPG, PPO 
 import networkx as nx
 from utils import json2networkx
@@ -12,52 +12,23 @@ from matplotlib.colors import LinearSegmentedColormap
 def main():
     print("Loading environment and model...")
     ddpg_env = NetworkEnv()
-    seed = 1001
+    seed = 1003
     
     # Load your best trained DDPG model
-    best_model_path = "./models/article_dijkstra/ddpg_sdn_routing_200000_steps" 
+    best_model_path = "./models/elephant/5x5_grid/dijkstra-based/ddpg_sdn_elephant_routing_300000_steps" 
     article_model = DDPG.load(best_model_path, env = ddpg_env)
 
     # 1. Reset the environment to generate a new random traffic matrix
     obs, _ = ddpg_env.reset(seed=seed) # Set seed early to be safe
 
     action, _states = article_model.predict(obs, deterministic=True)
-
-    max_weight_edges = []
-    for i, (u, v) in enumerate(ddpg_env.model.edges):
-        print(f"{(u,v)} = {action[i]}")
-
-        if action[i] == 5:
-            max_weight_edges.append((u, v))
-    
-    print(f"{max_weight_edges = }")
-
-    # --- TEST 1: THE NAIVE METHOD ---
-    # action = np.ones(ddpg_env.action_space.shape)
-
-    for key, path in ddpg_env.flows_paths.items():
-        print(f"{key} = {path}")
     
     # Capture the REWARD (the second variable returned by step)
     flatten_AVTM_matrix, reward, _, _, info = ddpg_env.step(action)
 
-    switch_AVTM_matrix = flatten_AVTM_matrix.reshape((25, 25))
-
-    switch_ro = {}
-    for switch in range(25):
-        switch_ro[switch] = switch_AVTM_matrix[:, switch].sum()    
-
-    # print(f"{switch_AVTM_matrix = }")
-    print(f"{switch_ro = }")
-    print(f"average_ro = {np.average(list(switch_ro.values()))}")
-    print(f"avg_delay = {info['avg_delay']}")
-    print(f"packet loss = {info['packet_loss']}")
     print(f"{reward = }")
-
-    base_dir = Path(__file__).resolve().parent
-    topology_path = base_dir / "topologies" / "mesh5x5.json"
-
-    G = json2networkx(topology_path)
+    
+    G = ddpg_env.model.G
 
     nodes_to_remove = []
 
@@ -68,23 +39,28 @@ def main():
     for node in nodes_to_remove:
         G.remove_node(node)
 
-    node_traffic_values = []
-    for node in G.nodes():
-        node_traffic_values.append(switch_ro[int(node)])
 
-    min_node_traffic = 0
-    max_node_traffic = max(max(node_traffic_values), 2)
+    elephant_flow_nodes = ddpg_env.flows_paths[ddpg_env.elephant_flow]
+    elephant_flow_nodes = [node for node in elephant_flow_nodes if node in G.nodes()]    
+
+    elephant_flow_edges = []
+    for (u,v) in zip(elephant_flow_nodes, elephant_flow_nodes[1:]):
+        elephant_flow_edges.append((u,v))
 
     pos = {node: (int(node) % 5, (int(node) // 5)) for node in G.nodes()}
 
-    custom_colors = ["green", "yellow", "red", "purple"]
-    traffic_cmap = LinearSegmentedColormap.from_list("traffic_heatmap", custom_colors)
+    elephant_flow_color = "#89CFF0"
 
-    # 1. Extract the specific traffic value for every edge in the graph
+    node_colors = [elephant_flow_color if node in elephant_flow_nodes else "black" for node in G.nodes()]
+
+    switch_AVTM_matrix = flatten_AVTM_matrix.reshape((25, 25))
+
     edge_traffic_values = []
     for u, v in G.edges():
         # Make sure the nodes can be mapped to your 0-24 matrix indices
         traffic_load = switch_AVTM_matrix[int(u)][int(v)]
+        if (u, v) in elephant_flow_edges:
+            print(f"{(u, v)} = {traffic_load}")
         edge_traffic_values.append(traffic_load)
 
     edge_widths = []
@@ -94,7 +70,14 @@ def main():
         visual_thickness = 1.0 + (load * 4.0) 
         edge_widths.append(visual_thickness)
 
-    
+
+    edge_colors = []
+    for u, v in G.edges():
+        if (u, v) in elephant_flow_edges:
+            edge_colors.append(elephant_flow_color)
+        else:
+            edge_colors.append("black")
+
     fig, ax = plt.subplots(figsize=(10, 8))
 
     # Rysowanie grafu z dynamiczną szerokością
@@ -104,10 +87,7 @@ def main():
         ax = ax,
         with_labels=True,
         node_size=1000,
-        node_color=node_traffic_values, 
-        cmap=traffic_cmap,              
-        vmin=min_node_traffic,          
-        vmax=max_node_traffic,
+        node_color=node_colors,
         font_size=10,
         font_weight="bold",
         font_color="white",
@@ -115,18 +95,22 @@ def main():
         arrowstyle='-|>',
         arrowsize=15,
         connectionstyle="arc3,rad=0.1",
+        edge_color=edge_colors,
         width=edge_widths,  
-        edge_color="black", 
     )
 
-    sm = plt.cm.ScalarMappable(cmap=traffic_cmap, norm=plt.Normalize(vmin=min_node_traffic, vmax=max_node_traffic))
-    sm.set_array([])
-    
-    cbar = fig.colorbar(sm, ax=ax, shrink=0.8, pad=0.05)
-    cbar.set_label('Utilization Factor ρ', fontsize=12, fontweight='bold')  
-    cbar.ax.set_navigate(False)
+    edge_labels = {(u, v): f"{d['weight']:.2f}" for u, v, d in G.edges(data=True)}
 
-    plt.title("Network Traffic Heatmap (Dijkstra Routing)", fontsize=16, fontweight='bold')
+    nx.draw_networkx_edge_labels(
+            G,
+            pos=pos,
+            edge_labels=edge_labels,
+            font_size=8,
+            font_color="darkred", 
+            ax=ax,
+            label_pos=0.7,  
+            rotate=False  
+        )
 
     plt.show()
 

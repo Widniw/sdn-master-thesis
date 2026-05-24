@@ -7,3 +7,4 @@ training_logs/
 *.pdf
 test.py
 optuna_results/
+images/

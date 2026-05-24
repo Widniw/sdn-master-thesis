@@ -111,7 +111,7 @@ def compare_histogram():
     # Add labels and title
     plt.xlabel('Reward', fontweight='bold', fontsize=12)
     plt.ylabel('Number of Scenarios', fontweight='bold', fontsize=12)
-    plt.title('Reward Distribution for 3 Approaches', fontweight='bold', fontsize=14)
+    # plt.title('Reward Distribution for 3 Approaches', fontweight='bold', fontsize=14)
     
     # Add a legend and grid for readability
     plt.legend()
@@ -120,6 +120,8 @@ def compare_histogram():
     # Render the plot
     plt.tight_layout()
     plt.show()
+
+    plt.savefig()
 
 if __name__ == "__main__":
     compare_histogram()

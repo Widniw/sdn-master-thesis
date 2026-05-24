@@ -13,7 +13,8 @@ class NetworkModel:
         self.no_of_switches = len(self.switches)
         self.edges = [edge for edge in self.G.edges()]
         self.no_of_edges = len(self.edges)
-        self.mu_max = 3000
+        self.mu_max = self.switches[0][1]['data'].service_rate
+        self.k_max = self.switches[0][1]['data'].queue_capacity
 
         self.node_to_index = {}
         for i, node in enumerate(self.G.nodes()):
@@ -127,7 +128,7 @@ class NetworkModel:
                 ro = total_incoming / service_rate        
 
                 if ro == 1:
-                    L_system = queue_capacity / total_outgoing
+                    L_system = queue_capacity / 2
                 elif ro < 1.0:
                     term1 = ro / (1 - ro)
                     term2 = ((queue_capacity + 1) * (ro ** (queue_capacity + 1))) / (1 - (ro ** (queue_capacity + 1)))
