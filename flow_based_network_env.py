@@ -53,9 +53,12 @@ class FlowBasedNetworkEnv(gym.Env):
 
         self.max_possible_delay = self.max_hops * (self.K_max / self.mu_max)
 
+        self.previous_reward = 1
+
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         random.seed(seed)
+        random.seed(412158)
 
         self.flows_traffic = {}
         self.flows_paths = {}
@@ -65,12 +68,16 @@ class FlowBasedNetworkEnv(gym.Env):
         
         # Generate random traffic
         for i in range(self.no_of_flows):
-            src, dst = random.sample(range(0, 25), 2)
-            flow_key = (f"10.0.1.{src}", f"10.0.1.{dst}")
+            unique = False
+            while not unique:
+                src, dst = random.sample(range(0, 25), 2)
+
+                flow_key = (f"10.0.1.{src}", f"10.0.1.{dst}")
+                if flow_key not in self.flows_traffic.keys():
+                    unique = True
             
-            if flow_key not in self.idx_to_flow.values():
-                self.idx_to_flow[self.flow_no] = flow_key
-                self.flow_no += 1
+            self.idx_to_flow[self.flow_no] = flow_key
+            self.flow_no += 1
 
             traffic_rate = random.uniform(10, 300)
             self.total_incoming_network += traffic_rate
@@ -93,6 +100,7 @@ class FlowBasedNetworkEnv(gym.Env):
         dst_state[dst_idx] = 1
 
         state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))
+        self.previous_reward = 1
         
         return state, {}
 
@@ -120,7 +128,11 @@ class FlowBasedNetworkEnv(gym.Env):
             # Calculate Reward
             r_d = 1.0 - min(avg_delay / self.max_possible_delay, 1.0)
             r_p = 1.0 - min(total_packet_loss / self.total_incoming_network, 1.0) if self.total_incoming_network > 0 else 1.0
-            reward = self.alpha * r_d + (1 - self.alpha) * r_p
+            current_reward = self.alpha * r_d + (1 - self.alpha) * r_p
+
+            delta_reward = current_reward - self.previous_reward
+
+            self.previous_reward = current_reward
 
             src_state = np.zeros(25)
             dst_state = np.zeros(25)
@@ -128,9 +140,16 @@ class FlowBasedNetworkEnv(gym.Env):
             truncated = True
             state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))
 
-            return state, reward, terminated, truncated, info
+            return state, delta_reward, terminated, truncated, info
         
-        reward = 0
+        r_d = 1.0 - min(avg_delay / self.max_possible_delay, 1.0)
+        r_p = 1.0 - min(total_packet_loss / self.total_incoming_network, 1.0) if self.total_incoming_network > 0 else 1.0
+        current_reward = self.alpha * r_d + (1 - self.alpha) * r_p
+
+        delta_reward = current_reward - self.previous_reward
+
+        self.previous_reward = current_reward
+
         truncated = False
 
         (src_ip, dst_ip) = self.idx_to_flow[self.flow_no]
@@ -138,12 +157,15 @@ class FlowBasedNetworkEnv(gym.Env):
         src_idx = int(src_ip.split('.')[-1]) 
         dst_idx = int(dst_ip.split('.')[-1])
 
+        flow_traffic = self.flows_traffic[(src_ip, dst_ip)]
+        normalized_flow_traffic = flow_traffic * 10 / self.mu_max
+
         src_state = np.zeros(25)
-        src_state[src_idx] = 1
+        src_state[src_idx] = normalized_flow_traffic
 
         dst_state = np.zeros(25)
-        dst_state[dst_idx] = 1
+        dst_state[dst_idx] = normalized_flow_traffic
 
         state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))        
 
-        return state, reward, terminated, truncated, info
+        return state, delta_reward, terminated, truncated, info
