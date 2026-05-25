@@ -63,12 +63,14 @@ class FlowBasedNetworkEnv(gym.Env):
         self.idx_to_flow = {}
         self.total_incoming_network = 0
         self.flow_no = 0
+
+        generator = random.Random(412158)
         
         # Generate random traffic
         for i in range(self.no_of_flows):
             unique = False
             while not unique:
-                src, dst = random.sample(range(0, 25), 2)
+                src, dst = generator.sample(range(0, 25), 2)
                 flow_key = (f"10.0.1.{src}", f"10.0.1.{dst}")
                 if flow_key not in self.flows_traffic.keys():
                     unique = True
@@ -158,11 +160,14 @@ class FlowBasedNetworkEnv(gym.Env):
         src_idx = int(src_ip.split('.')[-1]) 
         dst_idx = int(dst_ip.split('.')[-1])
 
+        flow_traffic = self.flows_traffic[(src_ip, dst_ip)]
+        normalized_flow_traffic = flow_traffic / self.mu_max
+
         src_state = np.zeros(25)
-        src_state[src_idx] = 1
+        src_state[src_idx] = normalized_flow_traffic
 
         dst_state = np.zeros(25)
-        dst_state[dst_idx] = 1
+        dst_state[dst_idx] = normalized_flow_traffic
 
         state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))        
 
