@@ -1,6 +1,6 @@
 import numpy as np
 from stable_baselines3 import PPO, DDPG
-from flow_based_network_env import FlowBasedNetworkEnv
+from flow_based_network_env_simplified import FlowBasedNetworkEnv
 import matplotlib.pyplot as plt
 
 def compare_histogram():
@@ -23,10 +23,10 @@ def compare_histogram():
         flowbased_obs, _ = flow_based_env.reset(seed=episode)
         flowbased_action = 0
 
-        truncated = False
+        terminated = False
         final_naive_reward = 1
 
-        while not truncated:
+        while not terminated:
             flowbased_obs, naive_reward, terminated, truncated, info = flow_based_env.step(flowbased_action)
             final_naive_reward += naive_reward
 
@@ -41,10 +41,10 @@ def compare_histogram():
 
         flowbased_action, _ = flow_based_model.predict(flowbased_obs, deterministic = True)
 
-        truncated = False
+        terminated = False
         final_flowbased_reward = 1
 
-        while not truncated:
+        while not terminated:
             flowbased_obs, flow_based_reward, terminated, truncated, info = flow_based_env.step(flowbased_action)
             final_flowbased_reward += flow_based_reward
 
