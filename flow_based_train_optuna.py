@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
     study = optuna.create_study(direction="maximize")
 
-    study.optimize(objective, n_trials = 300, show_progress_bar=True, callbacks=[save_best_params_callback])
+    study.optimize(objective, n_trials = 50, show_progress_bar=True, callbacks=[save_best_params_callback])
 
     print(f"Najlepsze parametry: {study.best_params}")
     print(f"Najlepszy uzyskany wynik: {study.best_value}")
