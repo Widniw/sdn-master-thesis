@@ -140,7 +140,8 @@ class FlowBasedNetworkEnv(gym.Env):
             src_state = np.zeros(25)
             dst_state = np.zeros(25)
 
-            truncated = True
+            terminated = True
+            truncated = False
             state = np.concatenate((switch_AVTM_matrix.flatten(), src_state, dst_state))
 
             return state, delta_reward, terminated, truncated, info
