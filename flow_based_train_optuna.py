@@ -1,5 +1,5 @@
 from stable_baselines3 import PPO
-from flow_based_network_env_one_arm_bandit_simplified import FlowBasedNetworkEnv
+from flow_based_network_env_simplified import FlowBasedNetworkEnv
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.callbacks import CheckpointCallback
@@ -25,9 +25,9 @@ def objective(trial):
 
     net_arch_size = trial.suggest_categorical("net_arch", ["large", "xlarge", "xxlarge"])
     arch_mapping = {
-        "large": [512, 512],
-        "xlarge": [1024, 1024],
-        "xxlarge": [2048, 1024],
+        "large": [512, 256],
+        "xlarge": [1024, 512, 256],
+        "xxlarge": [1024, 512],
     }
     net_arch = arch_mapping[net_arch_size] 
     policy_kwargs = dict(net_arch = dict(pi = net_arch, vf = net_arch))
@@ -48,7 +48,7 @@ def objective(trial):
         device="cpu"               
     )
 
-    model.learn(total_timesteps=60000)
+    model.learn(total_timesteps=100000)
 
     mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=75)
 
@@ -58,7 +58,7 @@ def save_best_params_callback(study, trial):
     # Sprawdzamy, czy obecny trial jest tym najlepszym
     if study.best_trial.number == trial.number:
         # Zapisujemy parametry do pliku JSON
-        with open("./optuna_results/best_params_3paths_150_flows_one_arm_bandit_simplified.json", "w") as f:
+        with open("./optuna_results/best_params_3paths_15_flows_simplified.json", "w") as f:
             json.dump({
                 "best_value": study.best_value,
                 "best_params": study.best_params,
